@@ -114,10 +114,31 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(videos.createdAt));
   }
 
-  async getPopularVideos(limit = 12): Promise<Video[]> {
+  async getPopularVideos(limit = 12): Promise<any[]> {
     return await db
-      .select()
+      .select({
+        id: videos.id,
+        userId: videos.userId,
+        title: videos.title,
+        description: videos.description,
+        thumbnailUrl: videos.thumbnailUrl,
+        videoUrl: videos.videoUrl,
+        duration: videos.duration,
+        viewCount: videos.viewCount,
+        category: videos.category,
+        isPublic: videos.isPublic,
+        createdAt: videos.createdAt,
+        updatedAt: videos.updatedAt,
+        user: {
+          id: users.id,
+          username: users.username,
+          profileImageUrl: users.profileImageUrl,
+          firstName: users.firstName,
+          lastName: users.lastName,
+        },
+      })
       .from(videos)
+      .leftJoin(users, eq(videos.userId, users.id))
       .where(eq(videos.isPublic, true))
       .orderBy(desc(videos.viewCount), desc(videos.createdAt))
       .limit(limit);
@@ -145,10 +166,29 @@ export class DatabaseStorage implements IStorage {
     return stream;
   }
 
-  async getLiveStreams(): Promise<Stream[]> {
+  async getLiveStreams(): Promise<any[]> {
     return await db
-      .select()
+      .select({
+        id: streams.id,
+        userId: streams.userId,
+        title: streams.title,
+        description: streams.description,
+        category: streams.category,
+        isLive: streams.isLive,
+        viewerCount: streams.viewerCount,
+        startedAt: streams.startedAt,
+        endedAt: streams.endedAt,
+        createdAt: streams.createdAt,
+        user: {
+          id: users.id,
+          username: users.username,
+          profileImageUrl: users.profileImageUrl,
+          firstName: users.firstName,
+          lastName: users.lastName,
+        },
+      })
       .from(streams)
+      .leftJoin(users, eq(streams.userId, users.id))
       .where(eq(streams.isLive, true))
       .orderBy(desc(streams.viewerCount));
   }
@@ -181,10 +221,22 @@ export class DatabaseStorage implements IStorage {
     return createdComment;
   }
 
-  async getCommentsByVideo(videoId: string): Promise<Comment[]> {
+  async getCommentsByVideo(videoId: string): Promise<any[]> {
     return await db
-      .select()
+      .select({
+        id: comments.id,
+        videoId: comments.videoId,
+        userId: comments.userId,
+        content: comments.content,
+        createdAt: comments.createdAt,
+        user: {
+          id: users.id,
+          username: users.username,
+          profileImageUrl: users.profileImageUrl,
+        },
+      })
       .from(comments)
+      .leftJoin(users, eq(comments.userId, users.id))
       .where(eq(comments.videoId, videoId))
       .orderBy(desc(comments.createdAt));
   }
@@ -199,10 +251,22 @@ export class DatabaseStorage implements IStorage {
     return createdMessage;
   }
 
-  async getChatMessagesByStream(streamId: string, limit = 50): Promise<ChatMessage[]> {
+  async getChatMessagesByStream(streamId: string, limit = 50): Promise<any[]> {
     return await db
-      .select()
+      .select({
+        id: chatMessages.id,
+        streamId: chatMessages.streamId,
+        userId: chatMessages.userId,
+        message: chatMessages.message,
+        createdAt: chatMessages.createdAt,
+        user: {
+          id: users.id,
+          username: users.username,
+          profileImageUrl: users.profileImageUrl,
+        },
+      })
       .from(chatMessages)
+      .leftJoin(users, eq(chatMessages.userId, users.id))
       .where(eq(chatMessages.streamId, streamId))
       .orderBy(desc(chatMessages.createdAt))
       .limit(limit);

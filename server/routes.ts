@@ -286,18 +286,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
           case 'join_stream':
             // Join a stream room
             currentStreamId = data.streamId;
-            if (!streamConnections.has(currentStreamId)) {
+            if (currentStreamId && !streamConnections.has(currentStreamId)) {
               streamConnections.set(currentStreamId, new Set());
             }
-            streamConnections.get(currentStreamId)!.add(ws);
+            if (currentStreamId) {
+              streamConnections.get(currentStreamId)!.add(ws);
+            }
             
             // Send recent chat messages
             try {
-              const recentMessages = await storage.getChatMessagesByStream(currentStreamId, 20);
-              ws.send(JSON.stringify({
-                type: 'chat_history',
-                messages: recentMessages.reverse(),
-              }));
+              if (currentStreamId) {
+                const recentMessages = await storage.getChatMessagesByStream(currentStreamId, 20);
+                ws.send(JSON.stringify({
+                  type: 'chat_history',
+                  messages: recentMessages.reverse(),
+                }));
+              }
             } catch (error) {
               console.error('Error fetching chat history:', error);
             }

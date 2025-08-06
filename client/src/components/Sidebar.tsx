@@ -29,9 +29,9 @@ export default function Sidebar({ className, onClose }: SidebarProps) {
   const { user, isAuthenticated } = useAuth();
 
   // Fetch following list
-  const { data: following = [] } = useQuery({
-    queryKey: ["/api/users", user?.id, "following"],
-    enabled: !!user?.id && isAuthenticated,
+  const { data: following = [] } = useQuery<any[]>({
+    queryKey: ["/api/users", (user as any)?.id, "following"],
+    enabled: !!(user as any)?.id && isAuthenticated,
   });
 
   const navigationItems = [
@@ -135,7 +135,7 @@ export default function Sidebar({ className, onClose }: SidebarProps) {
         </div>
 
         {/* Following */}
-        {isAuthenticated && following.length > 0 && (
+        {isAuthenticated && Array.isArray(following) && following.length > 0 && (
           <div>
             <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
               Following
