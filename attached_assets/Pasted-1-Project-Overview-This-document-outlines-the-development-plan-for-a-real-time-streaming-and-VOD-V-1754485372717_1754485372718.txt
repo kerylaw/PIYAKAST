@@ -1,0 +1,139 @@
+1. Project Overview
+This document outlines the development plan for a real-time streaming and VOD (Video On Demand) platform that combines features from Twitch.tv and YouTube. The project will include live broadcasting, real-time chat, a Superchat-like donation system, and the ability to upload and view pre-recorded videos. The goal is to deploy the service on Heroku, use a PostgreSQL database, and integrate with a free CDN for a stable and scalable platform.
+
+2. Technology Stack
+Frontend: React.js
+
+Backend: Node.js (with Express.js)
+
+Database: PostgreSQL (Heroku Postgres)
+
+Deployment: Heroku
+
+Live Streaming Server: Nginx-rtmp-module or Node-Media-Server (for RTMP stream ingestion and processing)
+
+CDN: Cloudflare (for accelerating content delivery of both live streams and VODs)
+
+VOD Storage: Amazon S3 or another object storage service (for storing large video files)
+
+3. Core Features & Implementation Details
+Frontend
+User Interface: An intuitive UI optimized for content viewing and discovery. The design will be responsive to provide a consistent user experience across various devices, including PCs, mobile phones, and tablets.
+
+Key Components:
+
+Home Page: Displays personalized content such as followed channels, recommended live streams, and popular VODs.
+
+Stream Page (Live Broadcasting):
+
+A high-quality, real-time video player (utilizing HTML5 <video> or libraries like hls.js, dash.js).
+
+A real-time chat component (WebSocket-based), with consideration for additional features like emojis and user badges.
+
+A streamer info panel for displaying details, donation links, and social media.
+
+A Superchat UI to allow users to donate with custom messages.
+
+VOD Page (Recorded Videos):
+
+A video player for watching uploaded content.
+
+A comment section, as well as like and dislike buttons.
+
+A related video recommendation feature.
+
+Upload Page: An intuitive interface for users to upload video files and set a title, description, and thumbnail.
+
+User Authentication: Basic user authentication and management features, including sign-up, login, profile management, and password reset.
+
+Backend
+RESTful API: Designed for communication with the frontend (e.g., /api/users, /api/streams, /api/videos, /api/superchats, /api/comments).
+
+WebSocket Server: Implemented for real-time chat and Superchat notifications.
+
+Authentication & Authorization: JWT (JSON Web Tokens) will be used to manage user authentication and sessions, and to control permissions for streaming and VOD uploads.
+
+PostgreSQL Schema:
+
+users: id, username, email, password_hash, profile_image_url, created_at
+
+streams: id, user_id (FK), title, current_viewers, is_live, started_at, ended_at (live stream info)
+
+videos: id, user_id (FK), title, description, thumbnail_url, video_url, view_count, upload_date, duration (VOD info)
+
+superchats: id, user_id (FK), stream_id (FK), amount, message, timestamp
+
+comments: id, video_id (FK), user_id (FK), text_content, timestamp (VOD comments)
+
+likes_dislikes: id, video_id (FK), user_id (FK), type (e.g., 'like', 'dislike'), timestamp
+
+Heroku Integration:
+
+The Node.js application will be deployed to a Heroku dyno.
+
+A Procfile will define the command to run the application.
+
+package.json will list all necessary dependencies.
+
+The Heroku Postgres add-on will be provisioned to easily integrate the database.
+
+Sensitive information (DB credentials, API keys, etc.) will be securely managed using Heroku's Config Vars.
+
+Live Streaming & CDN
+RTMP Server:
+
+A dedicated media server will be set up on the backend to receive RTMP streams from broadcasters using software like OBS.
+
+Ingested streams will be transcoded into various resolutions and bitrates to provide optimal quality based on the viewer's network conditions.
+
+CDN (Content Delivery Network) Configuration:
+
+A free CDN like Cloudflare will be used to efficiently distribute both live streams and VOD content to a global audience.
+
+The public IP of the RTMP server will be configured as the origin for live content.
+
+The VOD storage (e.g., an Amazon S3 bucket) will also be set as an origin for recorded videos.
+
+Frontend video players will fetch content from the CDN URLs, minimizing latency and improving loading speeds.
+
+VOD Functionality
+Video Upload & Processing:
+
+When a user uploads a video via the web interface, the backend server will receive the file.
+
+The file will be securely stored in scalable object storage like Amazon S3.
+
+Video Transcoding: The original video will be processed by a transcoding pipeline to convert it into various resolutions (e.g., 480p, 720p, 1080p) and streaming formats (e.g., HLS, DASH) for optimal viewing across all devices.
+
+VOD Hosting & Delivery:
+
+The transcoded video files will be stored in the object storage and cached by the CDN for fast delivery worldwide.
+
+The video_url in the PostgreSQL videos table will point to the CDN-enabled URL of the video file.
+
+Viewers will stream the VOD content directly from the CDN.
+
+4. Development Workflow
+Setup Heroku Project: Create a new Heroku app and provision necessary add-ons like Heroku Postgres.
+
+Backend Development:
+
+Build the RESTful APIs and WebSocket server.
+
+Design and create the PostgreSQL database tables for users, streams, videos, superchats, comments, and likes/dislikes.
+
+Integrate the RTMP media server for live streaming.
+
+Implement the VOD upload logic, including secure storage to Amazon S3 and the transcoding pipeline.
+
+Frontend Development:
+
+Develop the React components for the UI/UX, including dedicated pages for live streams and VODs.
+
+Implement the video upload interface.
+
+Connect the frontend to the backend APIs and WebSocket server to support all live and VOD interactions.
+
+Deployment: Push the code to the Heroku Git remote for automatic deployment.
+
+CDN & VOD Integration: Configure the chosen CDN service for both live stream and VOD delivery, and conduct thorough testing of content distribution.
