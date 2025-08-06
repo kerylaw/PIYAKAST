@@ -12,10 +12,10 @@ The application is built as a full-stack web platform with modern technologies, 
   - Trending page: Shows trending videos and live streams sorted by popularity
   - Live Now page: Displays all current live streams with real-time viewer counts
   - Videos page: Browse all videos with search, filtering, and sorting options
-  - Category pages: Dedicated pages for K-Beauty, K-Pop, K-Drama, and K-Movie content
+  - Category pages: Dedicated pages for K-Beauty, K-Pop, K-Drama, K-Movie, and K-Food content
 
 ✓ Updated navigation:
-  - Changed categories to Korean-themed: K-Beauty, K-Pop, K-Drama, K-Movie
+  - Changed categories to Korean-themed: K-Beauty, K-Pop, K-Drama, K-Movie, K-Food
   - Added routing for all new detail pages with proper icons and colors
   - Implemented responsive category browsing with tabs for videos and live streams
 

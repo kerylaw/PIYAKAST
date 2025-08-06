@@ -9,6 +9,7 @@ import {
   Music, 
   Heart, 
   Film,
+  ChefHat,
   X,
   Menu
 } from "lucide-react";
@@ -45,6 +46,7 @@ export default function Sidebar({ className, onClose }: SidebarProps) {
     { href: "/category/k-pop", icon: Music, label: "K-Pop" },
     { href: "/category/k-drama", icon: Heart, label: "K-Drama" },
     { href: "/category/k-movie", icon: Film, label: "K-Movie" },
+    { href: "/category/k-food", icon: ChefHat, label: "K-Food" },
   ];
 
   return (

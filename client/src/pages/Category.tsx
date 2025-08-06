@@ -5,6 +5,7 @@ import {
   Music, 
   Heart, 
   Film,
+  ChefHat,
   Play, 
   Eye, 
   Clock, 
@@ -42,6 +43,12 @@ const categoryConfig = {
     icon: Film,
     color: "text-purple-500",
     description: "Korean film reviews, trailers, and movie discussions"
+  },
+  "k-food": {
+    name: "K-Food",
+    icon: ChefHat,
+    color: "text-orange-500",
+    description: "Korean food recipes, cooking tutorials, and restaurant reviews"
   }
 };
 
