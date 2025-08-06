@@ -42,7 +42,7 @@ export default function Sidebar({ className, onClose }: SidebarProps) {
 
   const categoryItems = [
     { href: "/category/gaming", icon: Gamepad2, label: "Gaming" },
-    { href: "/category/music", icon: Music, label: "Music" },
+    { href: "/category/k-pop", icon: Music, label: "K-Pop" },
     { href: "/category/education", icon: GraduationCap, label: "Education" },
     { href: "/category/art", icon: Palette, label: "Art" },
   ];

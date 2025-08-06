@@ -10,6 +10,10 @@ import Home from "@/pages/Home";
 import VideoWatch from "@/pages/VideoWatch";
 import LiveStream from "@/pages/LiveStream";
 import Profile from "@/pages/Profile";
+import Trending from "@/pages/Trending";
+import LiveNow from "@/pages/LiveNow";
+import Videos from "@/pages/Videos";
+import Category from "@/pages/Category";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -21,6 +25,10 @@ function Router() {
       ) : (
         <>
           <Route path="/" component={Home} />
+          <Route path="/trending" component={Trending} />
+          <Route path="/live" component={LiveNow} />
+          <Route path="/videos" component={Videos} />
+          <Route path="/category/:category" component={Category} />
           <Route path="/watch/:id" component={VideoWatch} />
           <Route path="/stream/:id" component={LiveStream} />
           <Route path="/profile/:username" component={Profile} />

@@ -6,6 +6,24 @@ StreamHub is a comprehensive video streaming platform that combines live streami
 
 The application is built as a full-stack web platform with modern technologies, focusing on real-time interactions, scalable video delivery, and user engagement features including authentication, content management, and social interactions.
 
+## Recent Changes (January 2025)
+
+✓ Created detailed pages for content discovery:
+  - Trending page: Shows trending videos and live streams sorted by popularity
+  - Live Now page: Displays all current live streams with real-time viewer counts
+  - Videos page: Browse all videos with search, filtering, and sorting options
+  - Category pages: Dedicated pages for Gaming, K-Pop, Education, and Art content
+
+✓ Updated navigation:
+  - Changed "Music" category to "K-Pop" in sidebar navigation
+  - Added routing for all new detail pages
+  - Implemented responsive category browsing with tabs for videos and live streams
+
+✓ Enhanced content filtering:
+  - Search functionality across video titles and creator names
+  - Category-based filtering and sorting options
+  - Real-time statistics for each category (video count, live streams, total views)
+
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.

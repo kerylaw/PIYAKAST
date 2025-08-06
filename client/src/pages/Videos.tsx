@@ -1,0 +1,240 @@
+import { useQuery } from "@tanstack/react-query";
+import { Link } from "wouter";
+import { 
+  Play, 
+  Eye, 
+  Clock, 
+  ThumbsUp,
+  Filter,
+  Search
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import Layout from "@/components/Layout";
+import { formatDistanceToNow } from "date-fns";
+import { useState } from "react";
+
+export default function Videos() {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortBy, setSortBy] = useState("recent");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+
+  const { data: videos = [], isLoading } = useQuery({
+    queryKey: ["/api/videos"],
+  });
+
+  // Filter and sort videos
+  const filteredVideos = Array.isArray(videos) 
+    ? videos.filter((video: any) => {
+        const matchesSearch = searchQuery === "" || 
+          video.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          video.user?.username?.toLowerCase().includes(searchQuery.toLowerCase());
+        
+        const matchesCategory = categoryFilter === "all" || 
+          video.category?.toLowerCase() === categoryFilter.toLowerCase();
+        
+        return matchesSearch && matchesCategory;
+      }).sort((a: any, b: any) => {
+        switch (sortBy) {
+          case "views":
+            return (b.viewCount || 0) - (a.viewCount || 0);
+          case "likes":
+            return (b.likes || 0) - (a.likes || 0);
+          case "oldest":
+            return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+          case "recent":
+          default:
+            return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        }
+      })
+    : [];
+
+  const categories = Array.isArray(videos) 
+    ? Array.from(new Set(videos.map((video: any) => video.category).filter(Boolean)))
+    : [];
+
+  return (
+    <Layout>
+      <div className="container mx-auto px-6 py-8 max-w-7xl">
+        <div className="flex items-center space-x-3 mb-8">
+          <Play className="h-8 w-8 text-primary-purple" />
+          <h1 className="text-3xl font-bold text-white">Videos</h1>
+          <span className="text-gray-400">
+            {filteredVideos.length} videos
+          </span>
+        </div>
+
+        {/* Filters and Search */}
+        <div className="flex flex-col md:flex-row gap-4 mb-8">
+          <div className="flex-1">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="Search videos..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 bg-dark-blue border-gray-700 text-white"
+                data-testid="input-search-videos"
+              />
+            </div>
+          </div>
+          
+          <div className="flex space-x-3">
+            <Select value={sortBy} onValueChange={setSortBy}>
+              <SelectTrigger className="w-40 bg-dark-blue border-gray-700 text-white" data-testid="select-sort-by">
+                <SelectValue placeholder="Sort by" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="recent">Most Recent</SelectItem>
+                <SelectItem value="oldest">Oldest First</SelectItem>
+                <SelectItem value="views">Most Viewed</SelectItem>
+                <SelectItem value="likes">Most Liked</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+              <SelectTrigger className="w-40 bg-dark-blue border-gray-700 text-white" data-testid="select-category-filter">
+                <SelectValue placeholder="Category" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Categories</SelectItem>
+                {categories.map((category: string) => (
+                  <SelectItem key={category} value={category.toLowerCase()}>
+                    {category}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        {/* Video Grid */}
+        {isLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="bg-dark-blue rounded-lg p-4 animate-pulse">
+                <div className="aspect-video bg-gray-700 rounded mb-3" />
+                <div className="space-y-2">
+                  <div className="h-4 bg-gray-700 rounded w-3/4" />
+                  <div className="h-3 bg-gray-700 rounded w-1/2" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : filteredVideos.length === 0 ? (
+          <div className="text-center py-12">
+            <Play className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-xl font-semibold text-gray-400 mb-2">
+              {searchQuery ? "No videos found" : "No videos yet"}
+            </h3>
+            <p className="text-gray-500">
+              {searchQuery 
+                ? `No videos match "${searchQuery}". Try a different search term.`
+                : "Upload the first video to get started!"
+              }
+            </p>
+            {searchQuery && (
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setSearchQuery("");
+                  setCategoryFilter("all");
+                }}
+                className="mt-4"
+                data-testid="button-clear-search"
+              >
+                Clear filters
+              </Button>
+            )}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {filteredVideos.map((video: any) => (
+              <Link 
+                key={video.id} 
+                href={`/watch/${video.id}`}
+                className="group"
+                data-testid={`link-video-${video.id}`}
+              >
+                <div className="bg-dark-blue rounded-lg overflow-hidden border border-gray-700 hover:border-primary-purple transition-colors">
+                  <div className="relative aspect-video bg-gray-800">
+                    {video.thumbnailUrl ? (
+                      <img 
+                        src={video.thumbnailUrl} 
+                        alt={video.title}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <Play className="h-12 w-12 text-gray-400" />
+                      </div>
+                    )}
+                    {video.duration && (
+                      <div className="absolute bottom-2 right-2 bg-black bg-opacity-75 text-white text-xs px-2 py-1 rounded">
+                        {video.duration}
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-4">
+                    <h3 className="font-semibold text-white group-hover:text-primary-purple transition-colors mb-2 line-clamp-2">
+                      {video.title}
+                    </h3>
+                    <div className="flex items-center space-x-2 mb-3">
+                      <Avatar className="w-6 h-6">
+                        <AvatarImage 
+                          src={video.user?.profileImageUrl} 
+                          alt={video.user?.username || 'User'} 
+                        />
+                        <AvatarFallback className="text-xs">
+                          {(video.user?.username || 'U')[0].toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="text-sm text-gray-400 truncate">
+                        {video.user?.username}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs text-gray-500 mb-2">
+                      <div className="flex items-center space-x-3">
+                        <div className="flex items-center space-x-1">
+                          <Eye className="h-3 w-3" />
+                          <span>{video.viewCount || 0}</span>
+                        </div>
+                        <div className="flex items-center space-x-1">
+                          <ThumbsUp className="h-3 w-3" />
+                          <span>{video.likes || 0}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-1">
+                        <Clock className="h-3 w-3" />
+                        <span>
+                          {formatDistanceToNow(new Date(video.createdAt), { addSuffix: true })}
+                        </span>
+                      </div>
+                    </div>
+                    {video.category && (
+                      <Badge variant="outline" className="text-xs">
+                        {video.category}
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
+
+        {/* Load more button could be added here for pagination */}
+        {filteredVideos.length > 0 && (
+          <div className="text-center mt-12">
+            <p className="text-gray-400 text-sm">
+              Showing {filteredVideos.length} videos
+            </p>
+          </div>
+        )}
+      </div>
+    </Layout>
+  );
+}
