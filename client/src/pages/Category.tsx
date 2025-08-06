@@ -1,10 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link, useParams } from "wouter";
 import { 
-  Gamepad2, 
+  Sparkles, 
   Music, 
-  GraduationCap, 
-  Palette,
+  Heart, 
+  Film,
   Play, 
   Eye, 
   Clock, 
@@ -19,11 +19,11 @@ import Layout from "@/components/Layout";
 import { formatDistanceToNow } from "date-fns";
 
 const categoryConfig = {
-  gaming: {
-    name: "Gaming",
-    icon: Gamepad2,
-    color: "text-green-500",
-    description: "Latest gaming content, walkthroughs, and live streams"
+  "k-beauty": {
+    name: "K-Beauty",
+    icon: Sparkles,
+    color: "text-pink-400",
+    description: "Korean beauty content, makeup tutorials, and skincare routines"
   },
   "k-pop": {
     name: "K-Pop",
@@ -31,17 +31,17 @@ const categoryConfig = {
     color: "text-pink-500",
     description: "K-Pop music, dance covers, and entertainment content"
   },
-  education: {
-    name: "Education",
-    icon: GraduationCap,
-    color: "text-blue-500",
-    description: "Educational content, tutorials, and learning resources"
+  "k-drama": {
+    name: "K-Drama",
+    icon: Heart,
+    color: "text-red-500",
+    description: "Korean drama reviews, discussions, and behind-the-scenes content"
   },
-  art: {
-    name: "Art",
-    icon: Palette,
+  "k-movie": {
+    name: "K-Movie",
+    icon: Film,
     color: "text-purple-500",
-    description: "Creative content, art tutorials, and artistic showcases"
+    description: "Korean film reviews, trailers, and movie discussions"
   }
 };
 

@@ -145,7 +145,7 @@ export default function LiveNow() {
           <div className="mt-12">
             <h3 className="text-lg font-semibold text-white mb-4">Browse by Category</h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              {['Gaming', 'K-Pop', 'Education', 'Art', 'Tech', 'Sports', 'Cooking', 'Travel'].map((category) => (
+              {['K-Beauty', 'K-Pop', 'K-Drama', 'K-Movie', 'Tech', 'Sports', 'Cooking', 'Travel'].map((category) => (
                 <Link 
                   key={category}
                   href={`/category/${category.toLowerCase()}`}

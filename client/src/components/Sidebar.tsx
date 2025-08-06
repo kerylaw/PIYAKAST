@@ -5,10 +5,10 @@ import {
   TrendingUp, 
   Radio, 
   Play, 
-  Gamepad2, 
+  Sparkles, 
   Music, 
-  GraduationCap, 
-  Palette,
+  Heart, 
+  Film,
   X,
   Menu
 } from "lucide-react";
@@ -41,10 +41,10 @@ export default function Sidebar({ className, onClose }: SidebarProps) {
   ];
 
   const categoryItems = [
-    { href: "/category/gaming", icon: Gamepad2, label: "Gaming" },
+    { href: "/category/k-beauty", icon: Sparkles, label: "K-Beauty" },
     { href: "/category/k-pop", icon: Music, label: "K-Pop" },
-    { href: "/category/education", icon: GraduationCap, label: "Education" },
-    { href: "/category/art", icon: Palette, label: "Art" },
+    { href: "/category/k-drama", icon: Heart, label: "K-Drama" },
+    { href: "/category/k-movie", icon: Film, label: "K-Movie" },
   ];
 
   return (
