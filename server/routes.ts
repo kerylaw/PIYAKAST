@@ -183,6 +183,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           if (response.ok) {
             const data = await response.json();
+            console.log('✅ Cloudflare Live Input created:', data);
             const liveInput = data.result;
             
             res.json({
@@ -194,33 +195,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
               cloudflareStreamId: liveInput.uid,
             });
           } else {
-            throw new Error('Failed to create Cloudflare Live Input');
+            const errorData = await response.json();
+            console.error('❌ Cloudflare API Error Response:', errorData);
+            throw new Error(`Failed to create Cloudflare Live Input: ${JSON.stringify(errorData)}`);
           }
         } catch (cloudflareError) {
           console.error("Cloudflare API Error:", cloudflareError);
-          // Fallback to mock credentials
-          const streamKey = `cf_${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`;
+          // Use YouTube Live alternative for testing
+          const streamKey = `yt_${Math.random().toString(36).substring(2, 15)}`;
           
           res.json({
             streamId: stream.id,
             streamKey,
-            rtmpUrl: `rtmps://live.cloudflarestream.com/live/`,
+            rtmpUrl: `rtmp://a.rtmp.youtube.com/live2`,
             rtmpStreamKey: streamKey,
             playbackUrl: `/stream/${stream.id}`,
-            note: "Using demo credentials - configure CLOUDFLARE_API_TOKEN for production",
+            note: "Demo mode - use your actual YouTube stream key for testing",
+            cloudflareNote: "Cloudflare Stream service needs to be enabled in your account first",
           });
         }
       } else {
         // Fallback when no API credentials
-        const streamKey = `cf_${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`;
+        const streamKey = `demo_${Math.random().toString(36).substring(2, 15)}`;
         
         res.json({
           streamId: stream.id,
           streamKey,
-          rtmpUrl: `rtmps://live.cloudflarestream.com/live/`,
+          rtmpUrl: `rtmp://a.rtmp.youtube.com/live2`,
           rtmpStreamKey: streamKey,
           playbackUrl: `/stream/${stream.id}`,
-          note: "Demo mode - provide CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID for production streaming",
+          note: "Demo mode - use your actual YouTube stream key for testing",
+          setupNote: "Provide CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID for Cloudflare Stream",
         });
       }
     } catch (error) {
