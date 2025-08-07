@@ -88,6 +88,17 @@ interface AdminStats {
   pendingReports: number;
   newUsersToday: number;
   newVideosToday: number;
+  newUsersLastWeek: number;
+  dailyActiveUsers: number;
+  newUsersGrowthRate: number;
+  activeUsersGrowthRate: number;
+  userRetentionRate: number;
+  dailyUploads: number;
+  averageWatchTime: number;
+  likeRatio: number;
+  dailyPageViews: number;
+  averageSessionTime: number;
+  bounceRate: number;
 }
 
 interface AdminUser {
@@ -906,8 +917,12 @@ export default function AdminPage() {
                           <div className="flex items-center justify-between">
                             <div>
                               <p className="text-blue-100 text-sm">신규 가입자 (7일)</p>
-                              <p className="text-2xl font-bold">156</p>
-                              <p className="text-blue-200 text-xs">+23% 증가</p>
+                              <p className="text-2xl font-bold">{formatNumber(stats?.newUsersLastWeek || 0)}</p>
+                              <p className="text-blue-200 text-xs">
+                                {stats?.newUsersGrowthRate && stats.newUsersGrowthRate > 0 ? '+' : ''}
+                                {stats?.newUsersGrowthRate || 0}% 
+                                {stats?.newUsersGrowthRate && stats.newUsersGrowthRate > 0 ? '증가' : stats?.newUsersGrowthRate === 0 ? '변화없음' : '감소'}
+                              </p>
                             </div>
                             <Users className="h-8 w-8 text-blue-200" />
                           </div>
@@ -918,8 +933,12 @@ export default function AdminPage() {
                           <div className="flex items-center justify-between">
                             <div>
                               <p className="text-green-100 text-sm">활성 사용자 (DAU)</p>
-                              <p className="text-2xl font-bold">2,847</p>
-                              <p className="text-green-200 text-xs">+12% 증가</p>
+                              <p className="text-2xl font-bold">{formatNumber(stats?.dailyActiveUsers || 0)}</p>
+                              <p className="text-green-200 text-xs">
+                                {stats?.activeUsersGrowthRate && stats.activeUsersGrowthRate > 0 ? '+' : ''}
+                                {stats?.activeUsersGrowthRate || 0}% 
+                                {stats?.activeUsersGrowthRate && stats.activeUsersGrowthRate > 0 ? '증가' : stats?.activeUsersGrowthRate === 0 ? '변화없음' : '감소'}
+                              </p>
                             </div>
                             <UserCheck className="h-8 w-8 text-green-200" />
                           </div>
@@ -930,8 +949,8 @@ export default function AdminPage() {
                           <div className="flex items-center justify-between">
                             <div>
                               <p className="text-purple-100 text-sm">사용자 유지율</p>
-                              <p className="text-2xl font-bold">78.3%</p>
-                              <p className="text-purple-200 text-xs">+5.2% 증가</p>
+                              <p className="text-2xl font-bold">{stats?.userRetentionRate || 0}%</p>
+                              <p className="text-purple-200 text-xs">활성 사용자 비율</p>
                             </div>
                             <TrendingUp className="h-8 w-8 text-purple-200" />
                           </div>
@@ -990,8 +1009,8 @@ export default function AdminPage() {
                           <div className="flex items-center justify-between">
                             <div>
                               <p className="text-orange-100 text-sm">일간 업로드</p>
-                              <p className="text-2xl font-bold">47</p>
-                              <p className="text-orange-200 text-xs">+18% 증가</p>
+                              <p className="text-2xl font-bold">{formatNumber(stats?.dailyUploads || 0)}</p>
+                              <p className="text-orange-200 text-xs">오늘 업로드된 영상</p>
                             </div>
                             <Video className="h-8 w-8 text-orange-200" />
                           </div>
@@ -1002,8 +1021,8 @@ export default function AdminPage() {
                           <div className="flex items-center justify-between">
                             <div>
                               <p className="text-red-100 text-sm">총 조회수</p>
-                              <p className="text-2xl font-bold">2.4M</p>
-                              <p className="text-red-200 text-xs">+31% 증가</p>
+                              <p className="text-2xl font-bold">{formatNumber(stats?.totalViews || 0)}</p>
+                              <p className="text-red-200 text-xs">전체 플랫폼 조회수</p>
                             </div>
                             <Eye className="h-8 w-8 text-red-200" />
                           </div>
@@ -1014,8 +1033,8 @@ export default function AdminPage() {
                           <div className="flex items-center justify-between">
                             <div>
                               <p className="text-yellow-100 text-sm">평균 시청시간</p>
-                              <p className="text-2xl font-bold">8.7분</p>
-                              <p className="text-yellow-200 text-xs">+7% 증가</p>
+                              <p className="text-2xl font-bold">{stats?.averageWatchTime || 0}분</p>
+                              <p className="text-yellow-200 text-xs">평균 영상 시청 시간</p>
                             </div>
                             <Clock className="h-8 w-8 text-yellow-200" />
                           </div>
@@ -1026,8 +1045,8 @@ export default function AdminPage() {
                           <div className="flex items-center justify-between">
                             <div>
                               <p className="text-pink-100 text-sm">좋아요 비율</p>
-                              <p className="text-2xl font-bold">94.2%</p>
-                              <p className="text-pink-200 text-xs">+2.1% 증가</p>
+                              <p className="text-2xl font-bold">{stats?.likeRatio || 0}%</p>
+                              <p className="text-pink-200 text-xs">전체 반응 중 좋아요</p>
                             </div>
                             <Heart className="h-8 w-8 text-pink-200" />
                           </div>
@@ -1232,8 +1251,8 @@ export default function AdminPage() {
                           <div className="flex items-center justify-between">
                             <div>
                               <p className="text-indigo-100 text-sm">일간 페이지뷰</p>
-                              <p className="text-2xl font-bold">124K</p>
-                              <p className="text-indigo-200 text-xs">+15% 증가</p>
+                              <p className="text-2xl font-bold">{formatNumber(stats?.dailyPageViews || 0)}</p>
+                              <p className="text-indigo-200 text-xs">오늘 페이지 방문 수</p>
                             </div>
                             <Eye className="h-8 w-8 text-indigo-200" />
                           </div>
@@ -1244,8 +1263,8 @@ export default function AdminPage() {
                           <div className="flex items-center justify-between">
                             <div>
                               <p className="text-cyan-100 text-sm">평균 체류시간</p>
-                              <p className="text-2xl font-bold">18.4분</p>
-                              <p className="text-cyan-200 text-xs">+8% 증가</p>
+                              <p className="text-2xl font-bold">{stats?.averageSessionTime || 0}분</p>
+                              <p className="text-cyan-200 text-xs">세션당 평균 시간</p>
                             </div>
                             <Clock className="h-8 w-8 text-cyan-200" />
                           </div>
@@ -1256,8 +1275,8 @@ export default function AdminPage() {
                           <div className="flex items-center justify-between">
                             <div>
                               <p className="text-teal-100 text-sm">이탈률</p>
-                              <p className="text-2xl font-bold">32.1%</p>
-                              <p className="text-teal-200 text-xs">-5% 개선</p>
+                              <p className="text-2xl font-bold">{stats?.bounceRate || 0}%</p>
+                              <p className="text-teal-200 text-xs">단일 페이지 방문 비율</p>
                             </div>
                             <TrendingUp className="h-8 w-8 text-teal-200" />
                           </div>

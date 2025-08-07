@@ -1247,6 +1247,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const newUsersToday = await storage.getNewUsersToday();
       const newVideosToday = await storage.getNewVideosToday();
       
+      // New advanced statistics
+      const newUsersLastWeek = await storage.getNewUsersLastWeek();
+      const dailyActiveUsers = await storage.getDailyActiveUsers();
+      const newUsersGrowthRate = await storage.getNewUsersGrowthRate();
+      const activeUsersGrowthRate = await storage.getActiveUsersGrowthRate();
+      
+      // Additional analytics
+      const userRetentionRate = await storage.getUserRetentionRate();
+      const dailyUploads = await storage.getDailyUploads();
+      const averageWatchTime = await storage.getAverageWatchTime();
+      const likeRatio = await storage.getLikeRatio();
+      const dailyPageViews = await storage.getDailyPageViews();
+      const averageSessionTime = await storage.getAverageSessionTime();
+      const bounceRate = await storage.getBounceRate();
+      
       res.json({
         totalUsers,
         activeUsers,
@@ -1257,7 +1272,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         totalRevenue,
         pendingReports,
         newUsersToday,
-        newVideosToday
+        newVideosToday,
+        newUsersLastWeek,
+        dailyActiveUsers,
+        newUsersGrowthRate,
+        activeUsersGrowthRate,
+        userRetentionRate,
+        dailyUploads,
+        averageWatchTime,
+        likeRatio,
+        dailyPageViews,
+        averageSessionTime,
+        bounceRate
       });
     } catch (error) {
       console.error('Error fetching admin stats:', error);
