@@ -32,8 +32,12 @@ export function StreamControls({ streamId, isLive, isOwner }: StreamControlsProp
       queryClient.invalidateQueries({ queryKey: ["/api/streams/live"] });
       toast({
         title: "라이브 방송 시작",
-        description: "라이브 방송이 시작되었습니다.",
+        description: "라이브 스트림 페이지로 이동합니다.",
       });
+      // 스트림 시작 후 라이브 페이지로 이동
+      setTimeout(() => {
+        window.location.href = `/stream/${streamId}`;
+      }, 1000);
     },
     onError: (error: Error) => {
       console.error("Start stream error:", error);
