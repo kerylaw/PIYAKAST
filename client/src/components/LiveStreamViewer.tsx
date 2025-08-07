@@ -322,15 +322,15 @@ export default function LiveStreamViewer({
         </div>
       </div>
 
-      {/* Chat Sidebar - 우측 고정, 더 넓게 */}
-      <div className="w-80 flex flex-col bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 h-full">
+      {/* Chat Sidebar - 우측 고정, 플레이어 높이에 맞춤 */}
+      <div className="w-80 flex flex-col bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 h-[70vh]">
         <div className="p-4 border-b border-gray-200 dark:border-gray-700">
           <h3 className="font-semibold">Live Chat</h3>
           <p className="text-sm text-gray-500">{currentViewerCount} viewers</p>
         </div>
 
-        {/* Chat Messages */}
-        <ScrollArea className="flex-1 p-4">
+        {/* Chat Messages - 플레이어 높이에 맞춰 조정 */}
+        <ScrollArea className="flex-1 p-4 h-[calc(70vh-140px)]">
           <div className="space-y-3">
             {chatMessages.length === 0 ? (
               <p className="text-gray-500 text-sm text-center">
@@ -372,7 +372,7 @@ export default function LiveStreamViewer({
           </div>
         </ScrollArea>
 
-        {/* Chat Input */}
+        {/* Chat Input - 플레이어 하단과 같은 높이에 위치 */}
         {isAuthenticated ? (
           <div className="p-4 border-t border-gray-200 dark:border-gray-700">
             <div className="flex space-x-2">
