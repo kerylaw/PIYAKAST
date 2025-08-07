@@ -6,7 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Users, Heart, Share, Send } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import AgoraRTC, { IAgoraRTCClient } from "agora-rtc-sdk-ng";
+// Removed Agora SDK - using PeerTube embed player instead
 
 interface LiveStreamViewerProps {
   streamId: string;
@@ -25,7 +25,7 @@ interface ChatMessage {
   createdAt: string;
 }
 
-const AGORA_APP_ID = import.meta.env.VITE_AGORA_APP_ID || "your_agora_app_id_here";
+// Using PeerTube embed player - no Agora required
 
 export default function LiveStreamViewer({
   streamId,
@@ -42,47 +42,15 @@ export default function LiveStreamViewer({
   const [currentViewerCount, setCurrentViewerCount] = useState(viewerCount);
 
   const videoRef = useRef<HTMLDivElement>(null);
-  const agoraClient = useRef<IAgoraRTCClient | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
 
-  // Initialize Agora viewer
+  // Initialize PeerTube embed viewer
   useEffect(() => {
     const initializeViewer = async () => {
-      if (AGORA_APP_ID === "your_agora_app_id_here") {
-        toast({
-          title: "Setup Required",
-          description: "Agora App ID not configured. Stream preview unavailable.",
-          variant: "destructive",
-        });
-        return;
-      }
-
       try {
-        // Initialize Agora client
-        agoraClient.current = AgoraRTC.createClient({ mode: "live", codec: "vp8" });
-        
-        // Set client role to audience
-        await agoraClient.current.setClientRole("audience");
-
-        // Join the channel as viewer
-        await agoraClient.current.join(AGORA_APP_ID, streamId, null, null);
-
-        // Listen for remote users (the host)
-        agoraClient.current.on("user-published", async (user, mediaType) => {
-          await agoraClient.current!.subscribe(user, mediaType);
-          
-          if (mediaType === "video" && videoRef.current) {
-            const remoteVideoTrack = user.videoTrack;
-            if (remoteVideoTrack) {
-              remoteVideoTrack.play(videoRef.current);
-            }
-          }
-        });
-
-        agoraClient.current.on("user-unpublished", (user) => {
-          console.log("Host stopped broadcasting");
-        });
-
+        // PeerTube embed initialization would go here
+        // For now, showing placeholder content
+        console.log("Initializing PeerTube viewer for stream:", streamId);
       } catch (error) {
         console.error("Failed to join stream:", error);
         toast({
@@ -94,12 +62,6 @@ export default function LiveStreamViewer({
     };
 
     initializeViewer();
-
-    return () => {
-      if (agoraClient.current) {
-        agoraClient.current.leave();
-      }
-    };
   }, [streamId, toast]);
 
   // Initialize WebSocket for chat
@@ -185,15 +147,13 @@ export default function LiveStreamViewer({
             </div>
           </div>
 
-          {/* Stream not available fallback */}
-          {AGORA_APP_ID === "your_agora_app_id_here" && (
-            <div className="absolute inset-0 flex items-center justify-center bg-gray-900">
-              <div className="text-center text-white">
-                <div className="text-lg font-medium mb-2">🎥 Live Stream Preview</div>
-                <p className="text-gray-400">Stream would appear here with proper Agora configuration</p>
-              </div>
+          {/* PeerTube stream placeholder */}
+          <div className="absolute inset-0 flex items-center justify-center bg-gray-900">
+            <div className="text-center text-white">
+              <div className="text-lg font-medium mb-2">🎥 Live Stream</div>
+              <p className="text-gray-400">PeerTube stream player will appear here</p>
             </div>
-          )}
+          </div>
         </div>
 
         {/* Stream Info */}

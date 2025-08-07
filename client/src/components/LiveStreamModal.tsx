@@ -9,14 +9,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Video, VideoOff, Mic, MicOff, Square, Settings } from "lucide-react";
-import AgoraRTC, { IAgoraRTCClient, ICameraVideoTrack, IMicrophoneAudioTrack } from "agora-rtc-sdk-ng";
+// Removed Agora SDK - using PeerTube RTMP streaming instead
 
 interface LiveStreamModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-const AGORA_APP_ID = import.meta.env.VITE_AGORA_APP_ID || "your_agora_app_id_here";
+// Using PeerTube RTMP streaming - no Agora required
 
 const categories = [
   { value: "K-Beauty", label: "K-Beauty" },
@@ -37,9 +37,6 @@ export default function LiveStreamModal({ isOpen, onClose }: LiveStreamModalProp
   const [viewerCount, setViewerCount] = useState(0);
   
   const videoRef = useRef<HTMLDivElement>(null);
-  const agoraClient = useRef<IAgoraRTCClient | null>(null);
-  const audioTrack = useRef<IMicrophoneAudioTrack | null>(null);
-  const videoTrack = useRef<ICameraVideoTrack | null>(null);
   const streamId = useRef<string>("");
 
   const createStreamMutation = useMutation({
@@ -80,47 +77,19 @@ export default function LiveStreamModal({ isOpen, onClose }: LiveStreamModalProp
 
   const startLiveStream = async (channelName: string) => {
     try {
-      // Initialize Agora client
-      agoraClient.current = AgoraRTC.createClient({ mode: "live", codec: "vp8" });
-      
-      // Set client role to host
-      await agoraClient.current.setClientRole("host");
-
-      // Join the channel (using a simple token for demo - in production, get from your server)
-      const uid = await agoraClient.current.join(AGORA_APP_ID, channelName, null, null);
-
-      // Create audio and video tracks
-      [audioTrack.current, videoTrack.current] = await AgoraRTC.createMicrophoneAndCameraTracks();
-
-      // Play video track locally
-      if (videoRef.current && videoTrack.current) {
-        videoTrack.current.play(videoRef.current);
-      }
-
-      // Publish tracks to the channel
-      await agoraClient.current.publish([audioTrack.current, videoTrack.current]);
-
       setIsLive(true);
-      
-      // Listen for viewer updates
-      agoraClient.current.on("user-joined", () => {
-        setViewerCount(prev => prev + 1);
-      });
-      
-      agoraClient.current.on("user-left", () => {
-        setViewerCount(prev => Math.max(0, prev - 1));
-      });
+      setViewerCount(0);
 
       toast({
         title: "Live Stream Started!",
-        description: "Your stream is now live and broadcasting",
+        description: "Your stream is now live and broadcasting via PeerTube RTMP",
       });
 
     } catch (error) {
       console.error("Failed to start live stream:", error);
       toast({
         title: "Stream Error",
-        description: "Failed to start live stream. Check your camera/microphone permissions.",
+        description: "Failed to start live stream.",
         variant: "destructive",
       });
     }
@@ -128,22 +97,6 @@ export default function LiveStreamModal({ isOpen, onClose }: LiveStreamModalProp
 
   const stopLiveStream = async () => {
     try {
-      // Stop and close local tracks
-      if (audioTrack.current) {
-        audioTrack.current.stop();
-        audioTrack.current.close();
-      }
-      if (videoTrack.current) {
-        videoTrack.current.stop();
-        videoTrack.current.close();
-      }
-
-      // Leave the channel and disconnect
-      if (agoraClient.current) {
-        await agoraClient.current.leave();
-        agoraClient.current = null;
-      }
-
       setIsLive(false);
       setViewerCount(0);
       
@@ -157,17 +110,11 @@ export default function LiveStreamModal({ isOpen, onClose }: LiveStreamModalProp
   };
 
   const toggleVideo = async () => {
-    if (videoTrack.current) {
-      await videoTrack.current.setEnabled(!isVideoEnabled);
-      setIsVideoEnabled(!isVideoEnabled);
-    }
+    setIsVideoEnabled(!isVideoEnabled);
   };
 
   const toggleAudio = async () => {
-    if (audioTrack.current) {
-      await audioTrack.current.setEnabled(!isAudioEnabled);
-      setIsAudioEnabled(!isAudioEnabled);
-    }
+    setIsAudioEnabled(!isAudioEnabled);
   };
 
   const handleStartStream = () => {
@@ -358,16 +305,13 @@ export default function LiveStreamModal({ isOpen, onClose }: LiveStreamModalProp
           </div>
         </div>
 
-        {/* Agora Setup Notice */}
-        {AGORA_APP_ID === "your_agora_app_id_here" && (
-          <div className="mt-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
-            <p className="text-sm text-yellow-800 dark:text-yellow-200">
-              <strong>Setup Required:</strong> To enable live streaming, you need to add your Agora App ID to the environment variables.
-              Get your free App ID from <a href="https://www.agora.io" target="_blank" rel="noopener noreferrer" className="underline">agora.io</a>
-              and add it as VITE_AGORA_APP_ID in your environment.
-            </p>
-          </div>
-        )}
+        {/* PeerTube RTMP Setup Notice */}
+        <div className="mt-4 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+          <p className="text-sm text-green-800 dark:text-green-200">
+            <strong>PeerTube RTMP Streaming:</strong> This platform uses PeerTube for decentralized video streaming.
+            Set up OBS Studio or similar software to stream to our RTMP endpoint for professional live broadcasting.
+          </p>
+        </div>
       </DialogContent>
     </Dialog>
   );

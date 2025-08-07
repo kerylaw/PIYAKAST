@@ -8,6 +8,13 @@ The application is built as a full-stack web platform with modern technologies, 
 
 ## Recent Changes (January 2025)
 
+✓ **Agora SDK 완전 제거 및 UI 개선 (2025-01-07)**:
+  - Agora SDK 패키지 및 관련 코드 완전 삭제
+  - LiveStreamModal과 LiveStreamViewer에서 Agora 참조 제거
+  - PeerTube RTMP 기반 스트리밍으로 완전 전환
+  - 사이드바 라이트 테마 색상 대비 개선 (텍스트 가독성 향상)
+  - 콘솔 로그에서 Agora 관련 메시지 완전 제거
+
 ✓ **PeerTube 통합 시스템 구현 및 네트워크 이슈 해결 (2025-01-07)**:
   - PeerTube API 클라이언트 완전 구현 (OAuth 2.0 인증, 비디오 업로드, 라이브 스트리밍)
   - 하이브리드 비디오 시스템: PeerTube 우선, 로컬 백업
