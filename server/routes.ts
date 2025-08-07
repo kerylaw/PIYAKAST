@@ -5,6 +5,14 @@ import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
 import { recordStreamHeartbeat, removeStream } from "./streamMonitor";
 import { setupAuth, requireAuth } from "./auth";
+
+// Admin middleware
+const requireAdmin = (req: any, res: any, next: any) => {
+  if (!req.user || req.user.role !== 'admin') {
+    return res.status(403).json({ message: 'Admin access required' });
+  }
+  next();
+};
 import { 
   insertVideoSchema, 
   insertStreamSchema, 
@@ -1224,6 +1232,110 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Static file serving for uploads
   app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
   app.use('/uploads/thumbnails', express.static(path.join(process.cwd(), 'uploads/thumbnails')));
+
+  // Admin routes
+  app.get('/api/admin/stats', requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const totalUsers = await storage.getUserCount();
+      const activeUsers = await storage.getActiveUserCount();
+      const bannedUsers = await storage.getBannedUserCount();
+      const totalVideos = await storage.getVideoCount();
+      const totalStreams = await storage.getStreamCount();
+      const totalViews = await storage.getTotalViews();
+      const totalRevenue = await storage.getTotalRevenue();
+      const pendingReports = await storage.getPendingReportCount();
+      const newUsersToday = await storage.getNewUsersToday();
+      const newVideosToday = await storage.getNewVideosToday();
+      
+      res.json({
+        totalUsers,
+        activeUsers,
+        bannedUsers,
+        totalVideos,
+        totalStreams,
+        totalViews,
+        totalRevenue,
+        pendingReports,
+        newUsersToday,
+        newVideosToday
+      });
+    } catch (error) {
+      console.error('Error fetching admin stats:', error);
+      res.status(500).json({ message: 'Failed to fetch admin stats' });
+    }
+  });
+
+  app.get('/api/admin/users', requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const filter = req.query.filter as string;
+      const users = await storage.getAdminUsers(filter);
+      res.json(users);
+    } catch (error) {
+      console.error('Error fetching admin users:', error);
+      res.status(500).json({ message: 'Failed to fetch users' });
+    }
+  });
+
+  app.get('/api/admin/videos', requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const filter = req.query.filter as string;
+      const videos = await storage.getAdminVideos(filter);
+      res.json(videos);
+    } catch (error) {
+      console.error('Error fetching admin videos:', error);
+      res.status(500).json({ message: 'Failed to fetch videos' });
+    }
+  });
+
+  app.get('/api/admin/reports', requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const filter = req.query.filter as string;
+      const reports = await storage.getAdminReports(filter);
+      res.json(reports);
+    } catch (error) {
+      console.error('Error fetching admin reports:', error);
+      res.status(500).json({ message: 'Failed to fetch reports' });
+    }
+  });
+
+  app.patch('/api/admin/users/:userId/status', requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const { action, reason } = req.body;
+      
+      await storage.updateUserAdminStatus(userId, action, reason);
+      res.json({ message: 'User status updated successfully' });
+    } catch (error) {
+      console.error('Error updating user status:', error);
+      res.status(500).json({ message: 'Failed to update user status' });
+    }
+  });
+
+  app.patch('/api/admin/videos/:videoId/status', requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const { videoId } = req.params;
+      const { action } = req.body;
+      
+      await storage.updateVideoAdminStatus(videoId, action);
+      res.json({ message: 'Video status updated successfully' });
+    } catch (error) {
+      console.error('Error updating video status:', error);
+      res.status(500).json({ message: 'Failed to update video status' });
+    }
+  });
+
+  app.patch('/api/admin/reports/:reportId/status', requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const { reportId } = req.params;
+      const { status, note } = req.body;
+      
+      await storage.updateReportAdminStatus(reportId, status, note);
+      res.json({ message: 'Report status updated successfully' });
+    } catch (error) {
+      console.error('Error updating report status:', error);
+      res.status(500).json({ message: 'Failed to update report status' });
+    }
+  });
 
   // Create HTTP server
   const httpServer = createServer(app);

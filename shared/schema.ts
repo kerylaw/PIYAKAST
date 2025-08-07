@@ -33,6 +33,7 @@ export const users = pgTable("users", {
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
   username: varchar("username").unique(),
+  role: varchar("role").default("user"), // user, admin, creator
   provider: varchar("provider").default("email"), // email, google, kakao, naver
   providerId: varchar("provider_id"), // OAuth provider ID
   isEmailVerified: boolean("is_email_verified").default(false),

@@ -127,6 +127,24 @@ export interface IStorage {
   getCopyrightReportsByUser(reporterId: string): Promise<CopyrightReport[]>;
   getCopyrightReportsByVideo(videoId: string): Promise<CopyrightReport[]>;
   updateCopyrightReportStatus(id: string, status: string, reviewerNotes?: string): Promise<void>;
+  
+  // Admin operations
+  getUserCount(): Promise<number>;
+  getActiveUserCount(): Promise<number>;
+  getBannedUserCount(): Promise<number>;
+  getVideoCount(): Promise<number>;
+  getStreamCount(): Promise<number>;
+  getTotalViews(): Promise<number>;
+  getTotalRevenue(): Promise<number>;
+  getPendingReportCount(): Promise<number>;
+  getNewUsersToday(): Promise<number>;
+  getNewVideosToday(): Promise<number>;
+  getAdminUsers(filter?: string): Promise<any[]>;
+  getAdminVideos(filter?: string): Promise<any[]>;
+  getAdminReports(filter?: string): Promise<any[]>;
+  updateUserAdminStatus(userId: string, action: string, reason?: string): Promise<void>;
+  updateVideoAdminStatus(videoId: string, action: string): Promise<void>;
+  updateReportAdminStatus(reportId: string, status: string, note?: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -720,6 +738,210 @@ export class DatabaseStorage implements IStorage {
       .update(copyrightReports)
       .set(updateData)
       .where(eq(copyrightReports.id, id));
+  }
+
+  // Admin operations
+  async getUserCount(): Promise<number> {
+    const [result] = await db.select({ count: count() }).from(users);
+    return result.count;
+  }
+
+  async getActiveUserCount(): Promise<number> {
+    const [result] = await db.select({ count: count() }).from(users).where(eq(users.role, 'user'));
+    return result.count;
+  }
+
+  async getBannedUserCount(): Promise<number> {
+    // For now, return 0 since we don't have a banned field
+    return 0;
+  }
+
+  async getVideoCount(): Promise<number> {
+    const [result] = await db.select({ count: count() }).from(videos);
+    return result.count;
+  }
+
+  async getStreamCount(): Promise<number> {
+    const [result] = await db.select({ count: count() }).from(streams);
+    return result.count;
+  }
+
+  async getTotalViews(): Promise<number> {
+    const [result] = await db.select({ 
+      total: sql<number>`COALESCE(SUM(${videos.viewCount}), 0)` 
+    }).from(videos);
+    return result.total;
+  }
+
+  async getTotalRevenue(): Promise<number> {
+    const [result] = await db.select({ 
+      total: sql<number>`COALESCE(SUM(${payments.amount}), 0)` 
+    }).from(payments);
+    return result.total;
+  }
+
+  async getPendingReportCount(): Promise<number> {
+    const [result] = await db.select({ count: count() }).from(copyrightReports)
+      .where(eq(copyrightReports.status, 'pending'));
+    return result.count;
+  }
+
+  async getNewUsersToday(): Promise<number> {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const [result] = await db.select({ count: count() }).from(users)
+      .where(sql`${users.createdAt} >= ${today}`);
+    return result.count;
+  }
+
+  async getNewVideosToday(): Promise<number> {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const [result] = await db.select({ count: count() }).from(videos)
+      .where(sql`${videos.createdAt} >= ${today}`);
+    return result.count;
+  }
+
+  async getAdminUsers(filter?: string): Promise<any[]> {
+    let query = db.select({
+      id: users.id,
+      username: users.username,
+      email: users.email,
+      role: users.role,
+      isActive: sql<boolean>`true`,
+      createdAt: users.createdAt,
+      videoCount: sql<number>`0`,
+      totalViews: sql<number>`0`
+    }).from(users);
+
+    if (filter && filter !== 'all') {
+      switch (filter) {
+        case 'active':
+          query = query.where(eq(users.role, 'user'));
+          break;
+        case 'banned':
+          // No banned users implementation yet
+          break;
+        case 'creators':
+          query = query.where(eq(users.role, 'creator'));
+          break;
+        case 'admins':
+          query = query.where(eq(users.role, 'admin'));
+          break;
+      }
+    }
+
+    return await query.orderBy(desc(users.createdAt));
+  }
+
+  async getAdminVideos(filter?: string): Promise<any[]> {
+    let query = db.select({
+      id: videos.id,
+      title: videos.title,
+      userId: videos.userId,
+      user: {
+        username: users.username
+      },
+      viewCount: videos.viewCount,
+      isPublic: videos.isPublic,
+      createdAt: videos.createdAt,
+      reportCount: sql<number>`0`
+    }).from(videos)
+    .leftJoin(users, eq(videos.userId, users.id));
+
+    if (filter && filter !== 'all') {
+      switch (filter) {
+        case 'public':
+          query = query.where(eq(videos.isPublic, true));
+          break;
+        case 'private':
+          query = query.where(eq(videos.isPublic, false));
+          break;
+      }
+    }
+
+    return await query.orderBy(desc(videos.createdAt));
+  }
+
+  async getAdminReports(filter?: string): Promise<any[]> {
+    let query = db.select({
+      id: copyrightReports.id,
+      type: sql<string>`'copyright'`,
+      targetId: copyrightReports.videoId,
+      reporterId: copyrightReports.reporterId,
+      reason: copyrightReports.claimType,
+      description: copyrightReports.description,
+      status: copyrightReports.status,
+      createdAt: copyrightReports.createdAt,
+      reporter: {
+        username: users.username
+      }
+    }).from(copyrightReports)
+    .leftJoin(users, eq(copyrightReports.reporterId, users.id));
+
+    if (filter && filter !== 'all') {
+      query = query.where(eq(copyrightReports.status, filter));
+    }
+
+    return await query.orderBy(desc(copyrightReports.createdAt));
+  }
+
+  async updateUserAdminStatus(userId: string, action: string, reason?: string): Promise<void> {
+    // For now, just update role or active status
+    const updateData: any = {};
+    
+    switch (action) {
+      case 'ban':
+        // Would need to add banned fields to schema
+        break;
+      case 'unban':
+        // Would need to add banned fields to schema
+        break;
+      case 'activate':
+        // Could update a status field if we had one
+        break;
+      case 'deactivate':
+        // Could update a status field if we had one
+        break;
+    }
+
+    if (Object.keys(updateData).length > 0) {
+      await db.update(users).set(updateData).where(eq(users.id, userId));
+    }
+  }
+
+  async updateVideoAdminStatus(videoId: string, action: string): Promise<void> {
+    const updateData: any = {};
+    
+    switch (action) {
+      case 'hide':
+        updateData.isPublic = false;
+        break;
+      case 'show':
+        updateData.isPublic = true;
+        break;
+      case 'delete':
+        await db.delete(videos).where(eq(videos.id, videoId));
+        return;
+    }
+
+    if (Object.keys(updateData).length > 0) {
+      await db.update(videos).set(updateData).where(eq(videos.id, videoId));
+    }
+  }
+
+  async updateReportAdminStatus(reportId: string, status: string, note?: string): Promise<void> {
+    const updateData: any = { 
+      status,
+      reviewedAt: new Date(),
+      updatedAt: new Date()
+    };
+    
+    if (note) {
+      updateData.reviewerNotes = note;
+    }
+
+    await db.update(copyrightReports).set(updateData).where(eq(copyrightReports.id, reportId));
   }
 }
 
