@@ -2,8 +2,8 @@ import { PeerTubeConfig } from './peertube';
 
 // PeerTube configuration
 export const peertubeConfig: PeerTubeConfig = {
-  url: 'http://127.0.0.1:9000', // Default PeerTube port
-  username: 'kery73',
+  url: 'https://cast.piyak.kr', // Production PeerTube instance
+  username: 'root', // Admin username from config
   password: 'Yoyeom75!'
 };
 

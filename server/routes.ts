@@ -43,18 +43,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   console.log('🎬 Initializing PeerTube integration...');
   const peertubeClient = initializePeerTube(peertubeConfig);
   
-  // Test connection and authenticate
-  try {
-    const isConnected = await peertubeClient.testConnection();
-    if (isConnected) {
-      await peertubeClient.authenticate();
-      console.log('✅ PeerTube integration ready');
-    } else {
-      console.warn('⚠️ PeerTube connection failed - uploads will use local storage');
+  // Test connection and authenticate (non-blocking)
+  setTimeout(async () => {
+    try {
+      const isConnected = await peertubeClient.testConnection();
+      if (isConnected) {
+        await peertubeClient.authenticate();
+        console.log('✅ PeerTube integration ready');
+      } else {
+        console.warn('⚠️ PeerTube connection failed - uploads will use local storage');
+      }
+    } catch (error: any) {
+      console.warn('⚠️ PeerTube initialization failed - uploads will use local storage:', error.message);
     }
-  } catch (error: any) {
-    console.warn('⚠️ PeerTube initialization failed - uploads will use local storage:', error.message);
-  }
+  }, 5000); // 5초 후 백그라운드에서 연결 시도
 
   // Auth routes are now handled in auth.ts
 

@@ -234,7 +234,7 @@ export class PeerTubeClient {
         uuid: live.uuid,
         name: live.name,
         description: live.description,
-        rtmpUrl: live.rtmpUrl || `${this.baseUrl}/live`,
+        rtmpUrl: live.rtmpUrl || `rtmp://cast.piyak.kr:1935/live`,
         streamKey: live.streamKey,
         embedUrl: `${this.baseUrl}/videos/embed/${live.uuid}`,
         permanentLive: liveData.permanentLive,
@@ -334,7 +334,7 @@ export class PeerTubeClient {
         uuid: live.uuid,
         name: live.name,
         description: live.description,
-        rtmpUrl: live.rtmpUrl || `${this.baseUrl}/live`,
+        rtmpUrl: live.rtmpUrl || `rtmp://cast.piyak.kr:1935/live`,
         streamKey: live.streamKey,
         embedUrl: `${this.baseUrl}/videos/embed/${live.uuid}`,
         permanentLive: live.permanentLive,
@@ -354,7 +354,12 @@ export class PeerTubeClient {
    */
   async testConnection(): Promise<boolean> {
     try {
-      const response = await axios.get(`${this.baseUrl}/api/v1/config`);
+      const response = await axios.get(`${this.baseUrl}/api/v1/config`, {
+        timeout: 10000, // 10초 타임아웃
+        headers: {
+          'User-Agent': 'PIYAKast/1.0'
+        }
+      });
       console.log('✅ PeerTube connection successful');
       console.log('Instance:', response.data.instance.name);
       return true;
