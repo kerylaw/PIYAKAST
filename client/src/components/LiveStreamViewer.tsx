@@ -85,7 +85,7 @@ export default function LiveStreamViewer({
     initializeViewer();
   }, [streamId, toast]);
 
-  // Initialize WebSocket for chat
+  // Initialize WebSocket for chat and heartbeat
   useEffect(() => {
     // Use window.location.host which includes port automatically
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
@@ -99,6 +99,13 @@ export default function LiveStreamViewer({
       wsRef.current?.send(JSON.stringify({
         type: 'join_stream',
         streamId: streamId,
+      }));
+      
+      // Send initial heartbeat
+      wsRef.current?.send(JSON.stringify({
+        type: 'stream_heartbeat',
+        streamId: streamId,
+        userId: user?.id,
       }));
     };
 
@@ -121,7 +128,27 @@ export default function LiveStreamViewer({
     return () => {
       wsRef.current?.close();
     };
-  }, [streamId]);
+  }, [streamId, user?.id]);
+
+  // Send heartbeat every 15 seconds to keep stream active
+  useEffect(() => {
+    if (!isLive) return;
+    
+    const heartbeatInterval = setInterval(() => {
+      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+        wsRef.current.send(JSON.stringify({
+          type: 'stream_heartbeat',
+          streamId: streamId,
+          userId: user?.id,
+        }));
+        console.log("Sending stream heartbeat for:", streamId);
+      }
+    }, 15000); // Send every 15 seconds
+
+    return () => {
+      clearInterval(heartbeatInterval);
+    };
+  }, [streamId, isLive, user?.id]);
 
   const sendChatMessage = () => {
     if (!chatMessage.trim() || !isAuthenticated || !wsRef.current) return;
