@@ -62,28 +62,51 @@ export default function LiveStreamViewer({
   console.log("Stream ownership check:", { userId: user?.id, streamerId, isOwner });
   const [currentViewerCount, setCurrentViewerCount] = useState(viewerCount);
 
-  const videoRef = useRef<HTMLDivElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
   const wsRef = useRef<WebSocket | null>(null);
 
-  // Initialize PeerTube embed viewer
+  // Initialize webcam for stream owner
   useEffect(() => {
     const initializeViewer = async () => {
       try {
-        // PeerTube embed initialization would go here
-        // For now, showing placeholder content
         console.log("Initializing PeerTube viewer for stream:", streamId);
+        
+        // 스트리머인 경우 웹캠 시작
+        if (isOwner && !peertubeEmbedUrl) {
+          try {
+            const stream = await navigator.mediaDevices.getUserMedia({
+              video: true,
+              audio: true
+            });
+            
+            if (videoRef.current) {
+              videoRef.current.srcObject = stream;
+              videoRef.current.play();
+            }
+          } catch (error) {
+            console.warn("Failed to access webcam:", error);
+            toast({
+              title: "웹캠 접근 실패",
+              description: "카메라 권한을 허용해주세요.",
+              variant: "destructive",
+            });
+          }
+        }
       } catch (error) {
-        console.error("Failed to join stream:", error);
-        toast({
-          title: "Connection Error",
-          description: "Failed to connect to the live stream",
-          variant: "destructive",
-        });
+        console.error("Failed to initialize viewer:", error);
       }
     };
 
     initializeViewer();
-  }, [streamId, toast]);
+    
+    // Cleanup function
+    return () => {
+      if (videoRef.current?.srcObject) {
+        const stream = videoRef.current.srcObject as MediaStream;
+        stream.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, [streamId, isOwner, peertubeEmbedUrl, toast]);
 
   // Initialize WebSocket for chat and heartbeat
   useEffect(() => {
@@ -180,15 +203,13 @@ export default function LiveStreamViewer({
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 h-screen max-h-screen overflow-hidden">
-      {/* Main Video Area */}
-      <div className="lg:col-span-3 flex flex-col">
-        {/* Video Player */}
-        <div className="relative bg-black rounded-lg overflow-hidden aspect-video flex-1">
-          <div ref={videoRef} className="w-full h-full" />
-          
+    <div className="flex h-screen bg-gray-100 dark:bg-gray-900">
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col">
+        {/* Video Player - 좌측 상단에 고정 */}
+        <div className="relative bg-black aspect-video w-full max-w-4xl">
           {/* Stream Overlay */}
-          <div className="absolute top-4 left-4 flex items-center space-x-2">
+          <div className="absolute top-4 left-4 flex items-center space-x-2 z-10">
             <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
             <span className="text-white text-sm font-medium">LIVE</span>
             <div className="flex items-center text-white text-sm">
@@ -197,7 +218,7 @@ export default function LiveStreamViewer({
             </div>
           </div>
 
-          {/* PeerTube stream embed */}
+          {/* PeerTube stream embed 또는 웹캠 스트림 */}
           {peertubeEmbedUrl ? (
             <iframe
               src={peertubeEmbedUrl}
@@ -206,15 +227,26 @@ export default function LiveStreamViewer({
               allowFullScreen
               title={`${streamerName}'s Live Stream`}
             />
+          ) : isOwner ? (
+            // 스트리머용 웹캠 미리보기
+            <video
+              ref={videoRef}
+              autoPlay
+              muted
+              className="w-full h-full object-cover"
+              style={{ transform: 'scaleX(-1)' }} // 미러 효과
+            />
           ) : (
             <div className="absolute inset-0 flex items-center justify-center bg-gray-900">
               <div className="text-center text-white">
                 <div className="text-lg font-medium mb-2">🎥 Live Stream</div>
                 <div className="space-y-2">
-                  <p className="text-gray-400">Stream not available via PeerTube embed</p>
-                  {rtmpUrl && streamKey && (
+                  <p className="text-gray-400">
+                    {isLive ? "스트리밍 준비 중..." : "방송이 아직 시작되지 않았습니다"}
+                  </p>
+                  {rtmpUrl && streamKey && isOwner && (
                     <div className="text-sm text-gray-500 space-y-1">
-                      <p>Use streaming software (OBS Studio) with:</p>
+                      <p>OBS Studio 설정:</p>
                       <p>RTMP URL: {rtmpUrl}</p>
                       <p>Stream Key: {streamKey?.slice(0, 8)}...</p>
                     </div>
@@ -226,7 +258,7 @@ export default function LiveStreamViewer({
         </div>
 
         {/* Stream Info */}
-        <div className="mt-4 p-4 bg-white dark:bg-gray-800 rounded-lg">
+        <div className="p-4 bg-white dark:bg-gray-800">
           <div className="flex items-start justify-between">
             <div className="flex-1">
               <h1 className="text-xl font-bold mb-2">{title}</h1>
@@ -252,46 +284,46 @@ export default function LiveStreamViewer({
                     {currentViewerCount} watching
                   </div>
                 </div>
-                <StreamControls 
-                  streamId={streamId} 
-                  isLive={isLive} 
-                  isOwner={isOwner} 
-                />
                 
-                {isOwner && !isLive && (
-                  <div className="mt-2 p-3 bg-yellow-100 dark:bg-yellow-900 rounded-lg text-sm">
-                    <p className="text-yellow-800 dark:text-yellow-200">
-                      💡 <strong>방송 안내:</strong> "방송 시작" 버튼을 눌러야 다른 시청자들이 볼 수 있습니다.
-                      시청자가 없으면 30초 후 자동으로 방송이 종료됩니다.
-                    </p>
-                  </div>
-                )}
+                <div className="flex space-x-2">
+                  <StreamControls 
+                    streamId={streamId} 
+                    isLive={isLive} 
+                    isOwner={isOwner} 
+                  />
+                  
+                  {isAuthenticated && !isOwner && (
+                    <Button
+                      variant={isFollowed ? "default" : "outline"}
+                      onClick={handleFollow}
+                      data-testid="button-follow"
+                    >
+                      <Heart className={`w-4 h-4 mr-2 ${isFollowed ? "fill-current" : ""}`} />
+                      {isFollowed ? "Following" : "Follow"}
+                    </Button>
+                  )}
+                  
+                  <Button variant="outline" onClick={handleShare} data-testid="button-share">
+                    <Share className="w-4 h-4 mr-2" />
+                    Share
+                  </Button>
+                </div>
               </div>
-            </div>
-
-            <div className="flex space-x-2">
-              {isAuthenticated && (
-                <Button
-                  variant={isFollowed ? "default" : "outline"}
-                  onClick={handleFollow}
-                  data-testid="button-follow"
-                >
-                  <Heart className={`w-4 h-4 mr-2 ${isFollowed ? "fill-current" : ""}`} />
-                  {isFollowed ? "Following" : "Follow"}
-                </Button>
-              )}
               
-              <Button variant="outline" onClick={handleShare} data-testid="button-share">
-                <Share className="w-4 h-4 mr-2" />
-                Share
-              </Button>
+              {isOwner && !isLive && (
+                <div className="mt-3 p-3 bg-yellow-100 dark:bg-yellow-900 rounded-lg text-sm">
+                  <p className="text-yellow-800 dark:text-yellow-200">
+                    💡 <strong>방송 안내:</strong> "방송 시작" 버튼을 눌러야 다른 시청자들이 볼 수 있습니다.
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </div>
       </div>
 
-      {/* Chat Sidebar */}
-      <div className="flex flex-col bg-white dark:bg-gray-800 rounded-lg overflow-hidden">
+      {/* Chat Sidebar - 우측 고정 */}
+      <div className="w-80 flex flex-col bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700">
         <div className="p-4 border-b border-gray-200 dark:border-gray-700">
           <h3 className="font-semibold">Live Chat</h3>
           <p className="text-sm text-gray-500">{currentViewerCount} viewers</p>
