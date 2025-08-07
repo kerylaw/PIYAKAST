@@ -203,11 +203,11 @@ export default function LiveStreamViewer({
   };
 
   return (
-    <div className="flex h-screen bg-gray-100 dark:bg-gray-900">
+    <div className="flex h-screen bg-gray-100 dark:bg-gray-900 m-0 p-0">
       {/* Main Content Area - 완전히 좌측 상단에 붙임 */}
-      <div className="flex-1 flex flex-col h-full">
+      <div className="flex-1 flex flex-col h-full m-0 p-0">
         {/* Video Player - 좌측 상단에 완전히 붙이고 최대 크기 */}
-        <div className="relative bg-black h-[70vh] w-full">
+        <div className="relative bg-black h-[70vh] w-full m-0 p-0">
           {/* Stream Overlay */}
           <div className="absolute top-4 left-4 flex items-center space-x-2 z-10">
             <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />

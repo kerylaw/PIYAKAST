@@ -2,6 +2,13 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Remove default margins and paddings */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
 :root {
   /* Light theme - 개선된 색상 대비 */
   --background: hsl(0, 0%, 100%);
