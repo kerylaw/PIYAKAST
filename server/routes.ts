@@ -253,6 +253,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let streamData: any = {
         ...req.body,
         userId,
+        isLive: true, // 스트림 생성 시 바로 라이브 상태로 설정
+        startedAt: new Date(),
+        viewerCount: 0,
       };
 
       try {
@@ -317,12 +320,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.id;
       const { title, description, category } = req.body;
       
-      const streamData = insertStreamSchema.parse({
+      // 스트림 데이터 준비 (insertSchema 사용하지 않고 직접 구성)
+      const streamData = {
         title,
         description: description || "",
         category: category || "General",
         userId,
-      });
+        isLive: true, // 스트림 생성 시 바로 라이브 상태로 설정
+        startedAt: new Date(),
+        viewerCount: 0,
+      };
 
       const stream = await storage.createStream(streamData);
       console.log('✅ Database stream created:', stream.id);
