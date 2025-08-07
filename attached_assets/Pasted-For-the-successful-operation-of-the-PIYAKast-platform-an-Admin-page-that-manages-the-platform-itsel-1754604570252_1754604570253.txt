@@ -1,0 +1,74 @@
+For the successful operation of the PIYAKast platform, an Admin page that manages the platform itself as well as general users and creators (studio users) is essential. Based on YouTube's management system, I will analyze and organize the functions that can be applied to PIYAKast in detail.
+
+1. User Management Features
+This feature is a key part of managing all accounts in PIYAKast.
+
+Account Search and Look Up: All end-user, creator, and administrator accounts should be able to search by a variety of criteria, including name, email, ID, subscription date, and look up details.
+
+Managing Account Status:
+
+Stop/Block: You need the ability to temporarily suspend or permanently block activities of a particular account for reasons such as violating community guidelines or terms and conditions.
+
+Account Recovery: You must be able to recover suspended accounts and record their reasons.
+
+Administering permissions:
+
+Role-based Access Control (RBAC): You need a system that can define various roles, such as 'General User', 'Creator', 'Administrator', and 'Content Moderator', and grant permissions for each role (e.g., content deletion rights, revenue inquiry rights).
+
+Empowerment and reclaim: You must have fine control over access by granting or reclaiming specific roles to specific users.
+
+2. Content Management Features
+It is a function that monitors and manages all content to maintain the integrity of the platform.
+
+Content List Inquiry: All videos uploaded to PIYAKast, shorts, livestreaming, community posts, etc. should be filtered (post date, view count, report count, etc.).
+
+Content Status Management:
+
+Delete: You must be able to delete content that violates the terms and conditions immediately.
+
+Private/Warning: Before deleting, the ability to take content private or take warning action depending on the degree of violation is required.
+
+Copyright Management System:
+
+Auto-detection: It should be able to automatically detect whether the uploaded content contains copyrighted music, videos, etc., and take action against that content (such as stopping monetization, deleting, etc.).
+
+Report Processing: We need a process that allows us to receive reports of copyright violations, communicate between the reporter and the respondent, or mediate between managers to resolve the issue.
+
+3. Report Management Function
+It is a function that efficiently handles reports of inappropriate content, comments, and channels.
+
+Report reception and classification: Users should be able to check all reports in one place and classify them by reporting reasons (violence, sensationalism, hate speech, etc.).
+
+Processing Process:
+
+Assignment of person in charge: Report should be assigned to person in charge to handle it.
+
+Processing history: The processing process (review, action, notification of results) for each report must be recorded and tracked.
+
+Automation: It's efficient to build an automation system that automatically targets content that has been reported more than a certain number of times or takes temporary non-public action.
+
+4. Profit management capabilities
+It is a function of transparent management of the financial part of the PIYAKast platform.
+
+Total Revenue Status Dashboard: You need a dashboard that comprehensively shows all revenue streams, including advertising revenue across the platform, SuperChat, and membership.
+
+Creator Revenue Settlement:
+
+Look up your earnings history: You should be able to look up each creator's earnings history in detail.
+
+Settlement processing: We need a system that settles profits to creators at a fixed cycle and records settlement details.
+
+Managing Fees and Taxes:
+
+Set up revenue allocation: You need the ability to manage revenue allocation (e.g., PIYAKast 30% and Creator 70%).
+
+Tax Credit: You need the ability to automatically calculate and deduct taxes according to country-specific tax laws.
+
+5. Platform Settings Features
+Ability to manage the overall settings of the PIYAKast platform itself.
+
+Managing Community Guidelines: You should be able to modify and announce the platform's community guidelines.
+
+Advertising management: You must be able to manage advertisers, set advertising revenue distribution, and place advertising.
+
+Data Analysis and Reports: The ability to generate reports by extracting statistical data required for platform operations is required (e.g. daily subscribers, active users, content uploads, etc.)
