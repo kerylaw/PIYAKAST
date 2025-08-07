@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "wouter";
-import { Search, Video, Menu, X, Settings, User, Upload, LogOut } from "lucide-react";
+import { Search, Video, Menu, X, Settings, User, Upload, LogOut, Sun, Moon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/hooks/useAuth";
+import { useTheme } from "@/contexts/ThemeContext";
 import UploadModal from "./UploadModal";
 import LiveStreamModal from "./LiveStreamModal";
 import CloudflareLiveModal from "./CloudflareLiveModal";
@@ -22,6 +23,7 @@ interface HeaderProps {
 
 export default function Header({ onMobileMenuToggle }: HeaderProps) {
   const { user, isAuthenticated } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showLiveStreamModal, setShowLiveStreamModal] = useState(false);
   const [showCloudflareLiveModal, setShowCloudflareLiveModal] = useState(false);
@@ -37,7 +39,7 @@ export default function Header({ onMobileMenuToggle }: HeaderProps) {
 
   return (
     <>
-      <header className="bg-dark-blue border-b border-gray-700 sticky top-0 z-50">
+      <header className="bg-background border-b border-border sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             {/* Logo */}
@@ -53,7 +55,7 @@ export default function Header({ onMobileMenuToggle }: HeaderProps) {
               </Button>
               <Link href="/" className="flex items-center space-x-2" data-testid="link-home">
                 <Video className="h-8 w-8 text-primary-purple" />
-                <span className="font-bold text-xl">StreamHub</span>
+                <span className="font-bold text-xl">PIYAKast</span>
               </Link>
             </div>
 
@@ -112,6 +114,10 @@ export default function Header({ onMobileMenuToggle }: HeaderProps) {
                       <DropdownMenuItem>
                         <Settings className="mr-2 h-4 w-4" />
                         <span>Settings</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={toggleTheme} data-testid="button-toggle-theme">
+                        {theme === 'light' ? <Moon className="mr-2 h-4 w-4" /> : <Sun className="mr-2 h-4 w-4" />}
+                        <span>{theme === 'light' ? 'Dark Mode' : 'Light Mode'}</span>
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem onClick={() => window.location.href = "/api/logout"} data-testid="button-logout">

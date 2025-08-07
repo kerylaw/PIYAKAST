@@ -7,10 +7,10 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Eye, EyeOff, Mail, Lock, User, LogIn } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock, User, LogIn, Check, X } from "lucide-react";
 import { FaGoogle } from "react-icons/fa";
 import { SiKakao, SiNaver } from "react-icons/si";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { loginSchema, registerSchema } from "@shared/schema";
@@ -22,6 +22,7 @@ export default function AuthPage() {
   const [, setLocation] = useLocation();
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [usernameToCheck, setUsernameToCheck] = useState<string>('');
   const { toast } = useToast();
 
   // Redirect if already authenticated
@@ -50,6 +51,12 @@ export default function AuthPage() {
       lastName: "",
       username: "",
     },
+  });
+
+  // Check username availability
+  const { data: usernameCheck, isLoading: checkingUsername } = useQuery({
+    queryKey: ['/api/check-username', usernameToCheck],
+    enabled: usernameToCheck.length >= 3,
   });
 
   // Login mutation
@@ -84,7 +91,7 @@ export default function AuthPage() {
     onSuccess: () => {
       toast({
         title: "회원가입 성공",
-        description: "StreamHub에 오신 것을 환영합니다!",
+        description: "PIYAKast에 오신 것을 환영합니다!",
       });
       window.location.href = "/";
     },
@@ -126,7 +133,7 @@ export default function AuthPage() {
       <div className="flex-1 flex items-center justify-center p-8 bg-white dark:bg-gray-950">
         <div className="w-full max-w-md space-y-6">
           <div className="text-center space-y-2">
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">StreamHub</h1>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">PIYAKast</h1>
             <p className="text-gray-600 dark:text-gray-400">
               한국 엔터테인먼트를 즐기세요
             </p>
@@ -231,12 +238,33 @@ export default function AuthPage() {
                   <form onSubmit={registerForm.handleSubmit(handleRegister)} className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="username">사용자명 *</Label>
-                      <Input
-                        id="username"
-                        placeholder="사용자명을 입력하세요"
-                        data-testid="input-username"
-                        {...registerForm.register("username")}
-                      />
+                      <div className="relative">
+                        <Input
+                          id="username"
+                          placeholder="사용자명을 입력하세요"
+                          data-testid="input-username"
+                          {...registerForm.register("username", {
+                            onChange: (e) => setUsernameToCheck(e.target.value)
+                          })}
+                        />
+                        {usernameToCheck.length >= 3 && (
+                          <div className="absolute right-3 top-3">
+                            {checkingUsername ? (
+                              <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-primary" />
+                            ) : usernameCheck?.available ? (
+                              <Check className="h-4 w-4 text-green-500" />
+                            ) : (
+                              <X className="h-4 w-4 text-red-500" />
+                            )}
+                          </div>
+                        )}
+                      </div>
+                      {usernameToCheck.length >= 3 && usernameCheck && !usernameCheck.available && (
+                        <p className="text-sm text-red-600">이 사용자명은 이미 사용중입니다</p>
+                      )}
+                      {usernameToCheck.length >= 3 && usernameCheck?.available && (
+                        <p className="text-sm text-green-600">사용 가능한 사용자명입니다</p>
+                      )}
                       {registerForm.formState.errors.username && (
                         <p className="text-sm text-red-600">{registerForm.formState.errors.username.message}</p>
                       )}

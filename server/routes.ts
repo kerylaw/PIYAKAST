@@ -38,6 +38,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Auth routes are now handled in auth.ts
 
+  // Check username availability
+  app.get('/api/check-username/:username', async (req, res) => {
+    try {
+      const { username } = req.params;
+      const existingUser = await storage.getUserByUsername(username);
+      res.json({ available: !existingUser });
+    } catch (error) {
+      console.error("Error checking username:", error);
+      res.status(500).json({ message: "Failed to check username" });
+    }
+  });
+
   // Video routes
   app.get('/api/videos', async (req, res) => {
     try {

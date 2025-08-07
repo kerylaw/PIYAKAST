@@ -3,18 +3,18 @@ import { Video, Play, Users, Zap } from "lucide-react";
 
 export default function Landing() {
   return (
-    <div className="min-h-screen bg-dark-navy text-white">
+    <div className="min-h-screen bg-background text-foreground">
       {/* Hero Section */}
       <div className="relative overflow-hidden">
         {/* Background gradient */}
-        <div className="absolute inset-0 bg-gradient-to-br from-primary-purple/20 via-dark-navy to-dark-blue" />
+        <div className="absolute inset-0 bg-gradient-to-br from-primary-purple/20 via-gray-900 to-blue-900 dark:via-dark-navy dark:to-dark-blue" />
         
         {/* Navigation */}
         <header className="relative z-10 p-6">
           <div className="max-w-7xl mx-auto flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <Video className="h-8 w-8 text-primary-purple" />
-              <span className="font-bold text-xl">StreamHub</span>
+              <span className="font-bold text-xl">PIYAKast</span>
             </div>
             <Button
               onClick={() => window.location.href = "/auth"}
@@ -37,7 +37,7 @@ export default function Landing() {
             </h1>
             <p className="text-xl md:text-2xl text-gray-300 mb-8 max-w-3xl mx-auto">
               Join thousands of creators sharing their content with the world. 
-              Stream live, upload videos, and build your community on StreamHub.
+              Stream live, upload videos, and build your community on PIYAKast.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button

@@ -3,32 +3,33 @@
 @tailwind utilities;
 
 :root {
-  --background: hsl(240, 10%, 3.9%);
-  --foreground: hsl(0, 0%, 98%);
-  --muted: hsl(240, 3.7%, 15.9%);
-  --muted-foreground: hsl(240, 5%, 64.9%);
-  --popover: hsl(240, 10%, 3.9%);
-  --popover-foreground: hsl(0, 0%, 98%);
-  --card: hsl(240, 10%, 3.9%);
-  --card-foreground: hsl(0, 0%, 98%);
-  --border: hsl(240, 3.7%, 15.9%);
-  --input: hsl(240, 3.7%, 15.9%);
+  /* Light theme */
+  --background: hsl(0, 0%, 100%);
+  --foreground: hsl(222.2, 84%, 4.9%);
+  --muted: hsl(210, 40%, 96%);
+  --muted-foreground: hsl(215.4, 16.3%, 46.9%);
+  --popover: hsl(0, 0%, 100%);
+  --popover-foreground: hsl(222.2, 84%, 4.9%);
+  --card: hsl(0, 0%, 100%);
+  --card-foreground: hsl(222.2, 84%, 4.9%);
+  --border: hsl(214.3, 31.8%, 91.4%);
+  --input: hsl(214.3, 31.8%, 91.4%);
   --primary: hsl(262, 83%, 58%);
   --primary-foreground: hsl(210, 40%, 98%);
-  --secondary: hsl(240, 3.7%, 15.9%);
-  --secondary-foreground: hsl(0, 0%, 98%);
-  --accent: hsl(240, 3.7%, 15.9%);
-  --accent-foreground: hsl(0, 0%, 98%);
-  --destructive: hsl(0, 62.8%, 30.6%);
-  --destructive-foreground: hsl(0, 0%, 98%);
-  --ring: hsl(240, 4.9%, 83.9%);
+  --secondary: hsl(210, 40%, 96%);
+  --secondary-foreground: hsl(222.2, 84%, 4.9%);
+  --accent: hsl(210, 40%, 96%);
+  --accent-foreground: hsl(222.2, 84%, 4.9%);
+  --destructive: hsl(0, 84.2%, 60.2%);
+  --destructive-foreground: hsl(210, 40%, 98%);
+  --ring: hsl(262, 83%, 58%);
   --radius: 0.5rem;
 
-  /* Custom StreamHub colors */
-  --dark-navy: hsl(240, 45%, 7%);
-  --dark-blue: hsl(240, 40%, 12%);
-  --card-bg: hsl(216, 49%, 17%);
-  --elevated: hsl(210, 78%, 20%);
+  /* Custom PIYAKast colors */
+  --dark-navy: hsl(220, 30%, 95%);
+  --dark-blue: hsl(220, 25%, 92%);
+  --card-bg: hsl(220, 20%, 98%);
+  --elevated: hsl(220, 25%, 95%);
   --primary-purple: hsl(262, 83%, 58%);
   --primary-indigo: hsl(237, 91%, 67%);
   --live-red: hsl(0, 84%, 60%);
@@ -36,6 +37,7 @@
 }
 
 .dark {
+  /* Dark theme */
   --background: hsl(240, 10%, 3.9%);
   --foreground: hsl(0, 0%, 98%);
   --muted: hsl(240, 3.7%, 15.9%);
@@ -55,6 +57,12 @@
   --destructive: hsl(0, 62.8%, 30.6%);
   --destructive-foreground: hsl(0, 0%, 98%);
   --ring: hsl(240, 4.9%, 83.9%);
+
+  /* Custom PIYAKast dark colors */
+  --dark-navy: hsl(240, 45%, 7%);
+  --dark-blue: hsl(240, 40%, 12%);
+  --card-bg: hsl(216, 49%, 17%);
+  --elevated: hsl(210, 78%, 20%);
 }
 
 @layer base {
@@ -63,8 +71,7 @@
   }
 
   body {
-    @apply font-sans antialiased bg-dark-navy text-foreground;
-    background-color: hsl(240, 45%, 7%);
+    @apply font-sans antialiased bg-background text-foreground transition-colors duration-300;
   }
 }
 

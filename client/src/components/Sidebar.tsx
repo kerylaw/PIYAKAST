@@ -51,7 +51,7 @@ export default function Sidebar({ className, onClose }: SidebarProps) {
 
   return (
     <aside className={cn(
-      "fixed left-0 top-16 bottom-0 w-64 bg-dark-blue border-r border-gray-700 z-40 transform transition-transform lg:translate-x-0",
+      "fixed left-0 top-16 bottom-0 w-64 bg-background border-r border-border z-40 transform transition-transform lg:translate-x-0",
       "lg:static lg:top-0 lg:z-auto",
       className
     )}>
@@ -61,7 +61,7 @@ export default function Sidebar({ className, onClose }: SidebarProps) {
           <div className="lg:hidden flex justify-between items-center mb-4">
             <div className="flex items-center space-x-2">
               <div className="w-6 h-6 bg-primary-purple rounded" />
-              <span className="font-bold text-lg">StreamHub</span>
+              <span className="font-bold text-lg">PIYAKast</span>
             </div>
             <Button variant="ghost" size="icon" onClick={onClose} data-testid="button-close-sidebar">
               <X className="h-5 w-5" />
