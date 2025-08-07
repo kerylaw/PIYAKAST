@@ -57,14 +57,20 @@ export default function LiveStreamModal({ isOpen, onClose }: LiveStreamModalProp
         setRtmpUrl(stream.rtmpUrl);
         setStreamKey(stream.streamKey);
         setShowSetup(true);
-        toast({
-          title: "스트림 생성 완료!",
-          description: `OBS Studio 설정 정보를 확인하세요.`,
-        });
       }
       
-      startLiveStream(stream.id);
+      toast({
+        title: "스트림 생성 완료!",
+        description: "라이브 스트림 페이지로 이동합니다.",
+      });
+      
+      // 스트림 생성 후 바로 라이브 스트림 뷰어 페이지로 이동
+      setTimeout(() => {
+        window.location.href = `/stream/${stream.id}`;
+      }, 1000);
+      
       queryClient.invalidateQueries({ queryKey: ["/api/streams"] });
+      onClose(); // 모달 닫기
     },
     onError: () => {
       toast({
