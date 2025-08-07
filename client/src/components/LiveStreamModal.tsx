@@ -38,8 +38,9 @@ export default function LiveStreamModal({ isOpen, onClose }: LiveStreamModalProp
   const [rtmpUrl, setRtmpUrl] = useState("");
   const [streamKey, setStreamKey] = useState("");
   const [showSetup, setShowSetup] = useState(false);
+  const [stream, setStream] = useState<MediaStream | null>(null);
   
-  const videoRef = useRef<HTMLDivElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
   const streamId = useRef<string>("");
 
   const createStreamMutation = useMutation({
@@ -94,6 +95,9 @@ export default function LiveStreamModal({ isOpen, onClose }: LiveStreamModalProp
 
   const startLiveStream = async (channelName: string) => {
     try {
+      // Start webcam
+      await startWebcam();
+      
       setIsLive(true);
       setViewerCount(0);
 
@@ -112,8 +116,42 @@ export default function LiveStreamModal({ isOpen, onClose }: LiveStreamModalProp
     }
   };
 
+  const startWebcam = async () => {
+    try {
+      const mediaStream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: true
+      });
+      
+      setStream(mediaStream);
+      
+      if (videoRef.current) {
+        videoRef.current.srcObject = mediaStream;
+        videoRef.current.play();
+      }
+      
+    } catch (error) {
+      console.error("Failed to access webcam:", error);
+      toast({
+        title: "카메라 접근 실패",
+        description: "웹캠과 마이크 접근 권한을 허용해주세요.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const stopLiveStream = async () => {
     try {
+      // Stop webcam
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+        setStream(null);
+      }
+      
+      if (videoRef.current) {
+        videoRef.current.srcObject = null;
+      }
+      
       setIsLive(false);
       setViewerCount(0);
       
@@ -127,11 +165,23 @@ export default function LiveStreamModal({ isOpen, onClose }: LiveStreamModalProp
   };
 
   const toggleVideo = async () => {
-    setIsVideoEnabled(!isVideoEnabled);
+    if (stream) {
+      const videoTrack = stream.getVideoTracks()[0];
+      if (videoTrack) {
+        videoTrack.enabled = !isVideoEnabled;
+        setIsVideoEnabled(!isVideoEnabled);
+      }
+    }
   };
 
   const toggleAudio = async () => {
-    setIsAudioEnabled(!isAudioEnabled);
+    if (stream) {
+      const audioTrack = stream.getAudioTracks()[0];
+      if (audioTrack) {
+        audioTrack.enabled = !isAudioEnabled;
+        setIsAudioEnabled(!isAudioEnabled);
+      }
+    }
   };
 
   const handleStartStream = () => {
@@ -169,11 +219,28 @@ export default function LiveStreamModal({ isOpen, onClose }: LiveStreamModalProp
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (isLive) {
-        stopLiveStream();
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
       }
     };
-  }, []);
+  }, [stream]);
+
+  // Reset state when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+        setStream(null);
+      }
+      setIsLive(false);
+      setShowSetup(false);
+      setRtmpUrl("");
+      setStreamKey("");
+      setStreamTitle("");
+      setStreamDescription("");
+      setStreamCategory("");
+    }
+  }, [isOpen, stream]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -188,10 +255,25 @@ export default function LiveStreamModal({ isOpen, onClose }: LiveStreamModalProp
           {/* Video Preview */}
           <div className="space-y-4">
             <div className="relative bg-gray-900 rounded-lg overflow-hidden aspect-video">
-              <div ref={videoRef} className="w-full h-full" />
-              {!isLive && (
+              <video 
+                ref={videoRef} 
+                className="w-full h-full object-cover"
+                autoPlay
+                muted
+                playsInline
+              />
+              {!stream && (
                 <div className="absolute inset-0 flex items-center justify-center bg-gray-800">
-                  <p className="text-gray-400">Camera preview will appear here</p>
+                  <div className="text-center">
+                    <p className="text-gray-400 mb-2">웹캠 프리뷰</p>
+                    <Button 
+                      onClick={startWebcam}
+                      variant="outline"
+                      size="sm"
+                    >
+                      카메라 시작
+                    </Button>
+                  </div>
                 </div>
               )}
               
