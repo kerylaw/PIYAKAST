@@ -331,6 +331,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.updateStreamStatus(streamId, true, 0);
       console.log(`🟢 Stream ${streamId} started by user ${userId}`);
       
+      // Broadcast real-time update to all clients
+      broadcastToAll({
+        type: 'stream_started',
+        streamId,
+        timestamp: new Date().toISOString()
+      });
+      
       res.json({ message: "Stream started" });
     } catch (error) {
       console.error("Error starting stream:", error);
@@ -355,6 +362,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       await storage.updateStreamStatus(streamId, false);
       console.log(`🔴 Stream ${streamId} stopped by user ${userId}`);
+      
+      // Broadcast real-time update to all clients
+      broadcastToAll({
+        type: 'stream_stopped',
+        streamId,
+        timestamp: new Date().toISOString()
+      });
       
       res.json({ message: "Stream stopped" });
     } catch (error) {
@@ -581,6 +595,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // WebSocket server for real-time chat
   const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
+
+  // Broadcast function for real-time updates
+  function broadcastToAll(message: any) {
+    const messageStr = JSON.stringify(message);
+    wss.clients.forEach(client => {
+      if (client.readyState === 1) { // WebSocket.OPEN
+        client.send(messageStr);
+      }
+    });
+  }
 
   // Store active connections by stream ID
   const streamConnections = new Map<string, Set<WebSocket>>();
