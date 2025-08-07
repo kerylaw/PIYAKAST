@@ -90,6 +90,15 @@ export default function Header({ onMobileMenuToggle }: HeaderProps) {
             <div className="flex items-center space-x-4">
               {isAuthenticated ? (
                 <>
+                  <Button
+                    onClick={() => setShowUploadModal(true)}
+                    className="hidden md:flex items-center space-x-2 bg-primary-purple hover:bg-purple-700"
+                    data-testid="button-upload-video-header"
+                  >
+                    <Upload className="h-4 w-4" />
+                    <span>Upload</span>
+                  </Button>
+
                   {activeStream && !isOnStreamPage ? (
                     <Link href={`/stream/${activeStream.id}`}>
                       <Button
