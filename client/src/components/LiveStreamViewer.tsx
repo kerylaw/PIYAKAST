@@ -229,6 +229,15 @@ export default function LiveStreamViewer({
                   isLive={isLive} 
                   isOwner={isOwner} 
                 />
+                
+                {isOwner && !isLive && (
+                  <div className="mt-2 p-3 bg-yellow-100 dark:bg-yellow-900 rounded-lg text-sm">
+                    <p className="text-yellow-800 dark:text-yellow-200">
+                      💡 <strong>방송 안내:</strong> "방송 시작" 버튼을 눌러야 다른 시청자들이 볼 수 있습니다.
+                      시청자가 없으면 30초 후 자동으로 방송이 종료됩니다.
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
 
