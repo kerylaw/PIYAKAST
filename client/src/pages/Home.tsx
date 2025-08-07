@@ -192,6 +192,7 @@ export default function Home() {
                   id={video.id}
                   title={video.title}
                   thumbnailUrl={video.thumbnailUrl}
+                  videoUrl={video.videoUrl}
                   duration={video.duration}
                   viewCount={video.viewCount}
                   createdAt={video.createdAt}

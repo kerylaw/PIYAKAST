@@ -1,20 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "wouter";
 import { 
   Play, 
-  Eye, 
-  Clock, 
-  ThumbsUp,
-  Filter,
   Search
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Layout from "@/components/Layout";
-import { formatDistanceToNow } from "date-fns";
+import VideoCard from "@/components/VideoCard";
 import { useState } from "react";
 
 export default function Videos() {
@@ -153,75 +146,20 @@ export default function Videos() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {filteredVideos.map((video: any) => (
-              <Link 
-                key={video.id} 
-                href={`/watch/${video.id}`}
-                className="group"
-                data-testid={`link-video-${video.id}`}
-              >
-                <div className="bg-dark-blue rounded-lg overflow-hidden border border-gray-700 hover:border-primary-purple transition-colors">
-                  <div className="relative aspect-video bg-gray-800">
-                    {video.thumbnailUrl ? (
-                      <img 
-                        src={video.thumbnailUrl} 
-                        alt={video.title}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <Play className="h-12 w-12 text-gray-400" />
-                      </div>
-                    )}
-                    {video.duration && (
-                      <div className="absolute bottom-2 right-2 bg-black bg-opacity-75 text-white text-xs px-2 py-1 rounded">
-                        {video.duration}
-                      </div>
-                    )}
-                  </div>
-                  <div className="p-4">
-                    <h3 className="font-semibold text-white group-hover:text-primary-purple transition-colors mb-2 line-clamp-2">
-                      {video.title}
-                    </h3>
-                    <div className="flex items-center space-x-2 mb-3">
-                      <Avatar className="w-6 h-6">
-                        <AvatarImage 
-                          src={video.user?.profileImageUrl} 
-                          alt={video.user?.username || 'User'} 
-                        />
-                        <AvatarFallback className="text-xs">
-                          {(video.user?.username || 'U')[0].toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                      <span className="text-sm text-gray-400 truncate">
-                        {video.user?.username}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between text-xs text-gray-500 mb-2">
-                      <div className="flex items-center space-x-3">
-                        <div className="flex items-center space-x-1">
-                          <Eye className="h-3 w-3" />
-                          <span>{video.viewCount || 0}</span>
-                        </div>
-                        <div className="flex items-center space-x-1">
-                          <ThumbsUp className="h-3 w-3" />
-                          <span>{video.likes || 0}</span>
-                        </div>
-                      </div>
-                      <div className="flex items-center space-x-1">
-                        <Clock className="h-3 w-3" />
-                        <span>
-                          {formatDistanceToNow(new Date(video.createdAt), { addSuffix: true })}
-                        </span>
-                      </div>
-                    </div>
-                    {video.category && (
-                      <Badge variant="outline" className="text-xs">
-                        {video.category}
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-              </Link>
+              <VideoCard
+                key={video.id}
+                id={video.id}
+                title={video.title}
+                thumbnailUrl={video.thumbnailUrl}
+                videoUrl={video.videoUrl}
+                duration={video.duration}
+                viewCount={video.viewCount || 0}
+                createdAt={video.createdAt}
+                user={{
+                  username: video.user?.username || 'Unknown',
+                  profileImageUrl: video.user?.profileImageUrl
+                }}
+              />
             ))}
           </div>
         )}
