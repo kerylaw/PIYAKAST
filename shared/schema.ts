@@ -283,10 +283,14 @@ export const loginSchema = z.object({
 export const registerSchema = z.object({
   email: z.string().email("유효한 이메일을 입력해주세요"),
   password: z.string().min(6, "비밀번호는 6자 이상이어야 합니다"),
-  firstName: z.string().min(1, "이름을 입력해주세요"),
-  lastName: z.string().min(1, "성을 입력해주세요"),
+  firstName: z.string().optional(),
+  lastName: z.string().optional(),
   username: z.string().min(3, "사용자명은 3자 이상이어야 합니다").max(30, "사용자명은 30자 이하여야 합니다"),
-});
+}).transform(data => ({
+  ...data,
+  firstName: data.firstName === '' ? undefined : data.firstName,
+  lastName: data.lastName === '' ? undefined : data.lastName,
+}));
 
 export type LoginData = z.infer<typeof loginSchema>;
 export type RegisterData = z.infer<typeof registerSchema>;

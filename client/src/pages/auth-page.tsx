@@ -229,12 +229,25 @@ export default function AuthPage() {
                 </CardHeader>
                 <CardContent>
                   <form onSubmit={registerForm.handleSubmit(handleRegister)} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="username">사용자명 *</Label>
+                      <Input
+                        id="username"
+                        placeholder="사용자명을 입력하세요"
+                        data-testid="input-username"
+                        {...registerForm.register("username")}
+                      />
+                      {registerForm.formState.errors.username && (
+                        <p className="text-sm text-red-600">{registerForm.formState.errors.username.message}</p>
+                      )}
+                    </div>
+
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="firstName">이름</Label>
+                        <Label htmlFor="firstName">이름 (선택)</Label>
                         <Input
                           id="firstName"
-                          placeholder="이름"
+                          placeholder="이름 (선택사항)"
                           data-testid="input-first-name"
                           {...registerForm.register("firstName")}
                         />
@@ -243,10 +256,10 @@ export default function AuthPage() {
                         )}
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="lastName">성</Label>
+                        <Label htmlFor="lastName">성 (선택)</Label>
                         <Input
                           id="lastName"
-                          placeholder="성"
+                          placeholder="성 (선택사항)"
                           data-testid="input-last-name"
                           {...registerForm.register("lastName")}
                         />
@@ -257,20 +270,7 @@ export default function AuthPage() {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="username">사용자명</Label>
-                      <Input
-                        id="username"
-                        placeholder="사용자명"
-                        data-testid="input-username"
-                        {...registerForm.register("username")}
-                      />
-                      {registerForm.formState.errors.username && (
-                        <p className="text-sm text-red-600">{registerForm.formState.errors.username.message}</p>
-                      )}
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="registerEmail">이메일</Label>
+                      <Label htmlFor="registerEmail">이메일 *</Label>
                       <div className="relative">
                         <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                         <Input
@@ -288,7 +288,7 @@ export default function AuthPage() {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="registerPassword">비밀번호</Label>
+                      <Label htmlFor="registerPassword">비밀번호 *</Label>
                       <div className="relative">
                         <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                         <Input
