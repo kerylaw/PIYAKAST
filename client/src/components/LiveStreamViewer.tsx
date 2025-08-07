@@ -274,10 +274,10 @@ export default function LiveStreamViewer({
                 <div className="flex items-center space-x-4">
                   <div className="flex items-center space-x-2">
                     <Avatar className="w-8 h-8">
-                      <AvatarImage src={streamerAvatar} alt={streamerName} />
-                      <AvatarFallback>{streamerName.charAt(0)}</AvatarFallback>
+                      <AvatarImage src={streamerAvatar} alt={streamerName || "Streamer"} />
+                      <AvatarFallback>{streamerName?.charAt(0) || "U"}</AvatarFallback>
                     </Avatar>
-                    <span className="font-medium">{streamerName}</span>
+                    <span className="font-medium">{streamerName || "Unknown"}</span>
                   </div>
                   <div className="flex items-center text-gray-600 dark:text-gray-400">
                     <Users className="w-4 h-4 mr-1" />
@@ -340,15 +340,15 @@ export default function LiveStreamViewer({
               chatMessages.map((msg) => (
                 <div key={msg.id} className="flex space-x-2">
                   <Avatar className="w-6 h-6">
-                    <AvatarImage src={msg.profileImageUrl} alt={msg.username} />
+                    <AvatarImage src={msg.profileImageUrl} alt={msg.username || "User"} />
                     <AvatarFallback className="text-xs">
-                      {msg.username.charAt(0)}
+                      {msg.username?.charAt(0) || "U"}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center space-x-1">
                       <span className="text-sm font-medium truncate">
-                        {msg.username}
+                        {msg.username || "Unknown User"}
                       </span>
                       <span className="text-xs text-gray-500">
                         {new Date(msg.createdAt).toLocaleTimeString()}

@@ -1,0 +1,27 @@
+The above error occurred in the <LiveStreamViewer> component:
+
+    at LiveStreamViewer (https://f36a3b89-2e4d-4e87-ab4b-8847987554d8-00-kfxz68eu2r3d.spock.replit.dev/src/components/LiveStreamViewer.tsx:28:3)
+    at div
+    at main
+    at div
+    at div
+    at Layout (https://f36a3b89-2e4d-4e87-ab4b-8847987554d8-00-kfxz68eu2r3d.spock.replit.dev/src/components/Layout.tsx:19:34)
+    at LiveStream (https://f36a3b89-2e4d-4e87-ab4b-8847987554d8-00-kfxz68eu2r3d.spock.replit.dev/src/pages/LiveStream.tsx:25:18)
+    at Route (https://f36a3b89-2e4d-4e87-ab4b-8847987554d8-00-kfxz68eu2r3d.spock.replit.d…/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=4335028a:323:16)
+    at Switch (https://f36a3b89-2e4d-4e87-ab4b-8847987554d8-00-kfxz68eu2r3d.spock.replit.d…/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=4335028a:379:17)
+    at Router (https://f36a3b89-2e4d-4e87-ab4b-8847987554d8-00-kfxz68eu2r3d.spock.replit.dev/src/App.tsx?v=Iz7pB5hz_y5k70ONnNdxa:38:42)
+    at div
+    at Provider (https://f36a3b89-2e4d-4e87-ab4b-8847987554d8-00-kfxz68eu2r3d.spock.replit.d…unner/workspace/node_modules/.vite/deps/chunk-5AJU3CG7.js?v=4335028a:38:15)
+    at TooltipProvider (https://f36a3b89-2e4d-4e87-ab4b-8847987554d8-00-kfxz68eu2r3d.spock.replit.d…rkspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=4335028a:63:5)
+    at ThemeProvider (https://f36a3b89-2e4d-4e87-ab4b-8847987554d8-00-kfxz68eu2r3d.spock.replit.dev/src/contexts/ThemeContext.tsx:20:33)
+    at AuthProvider (https://f36a3b89-2e4d-4e87-ab4b-8847987554d8-00-kfxz68eu2r3d.spock.replit.dev/src/hooks/useAuth.tsx:22:32)
+    at QueryClientProvider (https://f36a3b89-2e4d-4e87-ab4b-8847987554d8-00-kfxz68eu2r3d.spock.replit.d…rkspace/node_modules/.vite/deps/@tanstack_react-query.js?v=4335028a:2805:3)
+    at App
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+
+chunk-RPCDYKBN.js?v=4335028a:19413 Uncaught TypeError: Cannot read properties of undefined (reading 'charAt')
+    at LiveStreamViewer.tsx:345:37
+    at Array.map (<anonymous>)
+    at LiveStreamViewer (LiveStreamViewer.tsx:340:28)
