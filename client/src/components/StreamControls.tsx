@@ -18,7 +18,12 @@ export function StreamControls({ streamId, isLive, isOwner }: StreamControlsProp
   const startStreamMutation = useMutation({
     mutationFn: async () => {
       const response = await apiRequest("POST", `/api/streams/${streamId}/start`);
-      return response.json();
+      const text = await response.text();
+      try {
+        return JSON.parse(text);
+      } catch {
+        return { message: text || "Stream started" };
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/streams", streamId] });
@@ -29,6 +34,7 @@ export function StreamControls({ streamId, isLive, isOwner }: StreamControlsProp
       });
     },
     onError: (error: Error) => {
+      console.error("Start stream error:", error);
       toast({
         title: "방송 시작 실패",
         description: error.message,
@@ -40,7 +46,12 @@ export function StreamControls({ streamId, isLive, isOwner }: StreamControlsProp
   const stopStreamMutation = useMutation({
     mutationFn: async () => {
       const response = await apiRequest("POST", `/api/streams/${streamId}/stop`);
-      return response.json();
+      const text = await response.text();
+      try {
+        return JSON.parse(text);
+      } catch {
+        return { message: text || "Stream stopped" };
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/streams", streamId] });
@@ -51,6 +62,7 @@ export function StreamControls({ streamId, isLive, isOwner }: StreamControlsProp
       });
     },
     onError: (error: Error) => {
+      console.error("Stop stream error:", error);
       toast({
         title: "방송 종료 실패",
         description: error.message,
