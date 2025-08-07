@@ -307,7 +307,7 @@ export default function AdminPage() {
       <div className="max-w-7xl mx-auto px-6 py-8">
         <Tabs value={selectedTab} onValueChange={setSelectedTab} className="space-y-6">
           {/* 탭 네비게이션 */}
-          <TabsList className="grid w-full grid-cols-5 bg-black/30 border border-purple-500/20">
+          <TabsList className="grid w-full grid-cols-6 bg-black/30 border border-purple-500/20">
             <TabsTrigger value="dashboard" className="data-[state=active]:bg-purple-600">
               <BarChart3 className="h-4 w-4 mr-2" />
               대시보드
@@ -323,6 +323,10 @@ export default function AdminPage() {
             <TabsTrigger value="reports" className="data-[state=active]:bg-purple-600">
               <Flag className="h-4 w-4 mr-2" />
               신고 관리
+            </TabsTrigger>
+            <TabsTrigger value="analytics" className="data-[state=active]:bg-purple-600">
+              <TrendingUp className="h-4 w-4 mr-2" />
+              데이터 분석
             </TabsTrigger>
             <TabsTrigger value="settings" className="data-[state=active]:bg-purple-600">
               <Settings className="h-4 w-4 mr-2" />
@@ -872,8 +876,1065 @@ export default function AdminPage() {
               </Card>
             </div>
           </TabsContent>
-        </Tabs>
-      </div>
-    </div>
-  );
-}
+
+          {/* 데이터 분석 탭 */}
+          <TabsContent value="analytics" className="space-y-6">
+            <Card className="bg-black/30 border-purple-500/20">
+              <CardHeader>
+                <CardTitle className="text-white flex items-center">
+                  <TrendingUp className="h-5 w-5 mr-2" />
+                  데이터 분석 대시보드
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Tabs defaultValue="user-analytics" className="w-full">
+                  <TabsList className="grid w-full grid-cols-5">
+                    <TabsTrigger value="user-analytics">사용자 분석</TabsTrigger>
+                    <TabsTrigger value="content-analytics">콘텐츠 분석</TabsTrigger>
+                    <TabsTrigger value="revenue-analytics">수익 분석</TabsTrigger>
+                    <TabsTrigger value="traffic-analytics">트래픽 분석</TabsTrigger>
+                    <TabsTrigger value="realtime-monitoring">실시간 모니터링</TabsTrigger>
+                  </TabsList>
+
+                  {/* 사용자 분석 */}
+                  <TabsContent value="user-analytics" className="space-y-6 mt-6">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <Card className="bg-gradient-to-br from-blue-600 to-blue-800">
+                        <CardContent className="p-4 text-white">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-blue-100 text-sm">신규 가입자 (7일)</p>
+                              <p className="text-2xl font-bold">156</p>
+                              <p className="text-blue-200 text-xs">+23% 증가</p>
+                            </div>
+                            <Users className="h-8 w-8 text-blue-200" />
+                          </div>
+                        </CardContent>
+                      </Card>
+                      <Card className="bg-gradient-to-br from-green-600 to-green-800">
+                        <CardContent className="p-4 text-white">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-green-100 text-sm">활성 사용자 (DAU)</p>
+                              <p className="text-2xl font-bold">2,847</p>
+                              <p className="text-green-200 text-xs">+12% 증가</p>
+                            </div>
+                            <UserCheck className="h-8 w-8 text-green-200" />
+                          </div>
+                        </CardContent>
+                      </Card>
+                      <Card className="bg-gradient-to-br from-purple-600 to-purple-800">
+                        <CardContent className="p-4 text-white">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-purple-100 text-sm">사용자 유지율</p>
+                              <p className="text-2xl font-bold">78.3%</p>
+                              <p className="text-purple-200 text-xs">+5.2% 증가</p>
+                            </div>
+                            <TrendingUp className="h-8 w-8 text-purple-200" />
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      <Card className="bg-black/30 border-purple-500/20">
+                        <CardHeader>
+                          <CardTitle className="text-white">가입자 증가 추이</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="h-64 flex items-center justify-center text-gray-400">
+                            <div className="text-center">
+                              <BarChart3 className="h-12 w-12 mx-auto mb-2" />
+                              <p>가입자 증가 차트</p>
+                              <p className="text-xs">지난 30일간 데이터</p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                      <Card className="bg-black/30 border-purple-500/20">
+                        <CardHeader>
+                          <CardTitle className="text-white">사용자 활동 패턴</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-4">
+                            <div className="flex justify-between items-center">
+                              <span className="text-gray-300">피크 시간대</span>
+                              <span className="text-purple-400 font-semibold">20:00 - 22:00</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-gray-300">평균 세션 시간</span>
+                              <span className="text-purple-400 font-semibold">24분 32초</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-gray-300">월평균 방문횟수</span>
+                              <span className="text-purple-400 font-semibold">8.7회</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-gray-300">모바일 사용률</span>
+                              <span className="text-purple-400 font-semibold">67.2%</span>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  </TabsContent>
+
+                  {/* 콘텐츠 분석 */}
+                  <TabsContent value="content-analytics" className="space-y-6 mt-6">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                      <Card className="bg-gradient-to-br from-orange-600 to-orange-800">
+                        <CardContent className="p-4 text-white">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-orange-100 text-sm">일간 업로드</p>
+                              <p className="text-2xl font-bold">47</p>
+                              <p className="text-orange-200 text-xs">+18% 증가</p>
+                            </div>
+                            <Video className="h-8 w-8 text-orange-200" />
+                          </div>
+                        </CardContent>
+                      </Card>
+                      <Card className="bg-gradient-to-br from-red-600 to-red-800">
+                        <CardContent className="p-4 text-white">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-red-100 text-sm">총 조회수</p>
+                              <p className="text-2xl font-bold">2.4M</p>
+                              <p className="text-red-200 text-xs">+31% 증가</p>
+                            </div>
+                            <Eye className="h-8 w-8 text-red-200" />
+                          </div>
+                        </CardContent>
+                      </Card>
+                      <Card className="bg-gradient-to-br from-yellow-600 to-yellow-800">
+                        <CardContent className="p-4 text-white">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-yellow-100 text-sm">평균 시청시간</p>
+                              <p className="text-2xl font-bold">8.7분</p>
+                              <p className="text-yellow-200 text-xs">+7% 증가</p>
+                            </div>
+                            <Clock className="h-8 w-8 text-yellow-200" />
+                          </div>
+                        </CardContent>
+                      </Card>
+                      <Card className="bg-gradient-to-br from-pink-600 to-pink-800">
+                        <CardContent className="p-4 text-white">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-pink-100 text-sm">좋아요 비율</p>
+                              <p className="text-2xl font-bold">94.2%</p>
+                              <p className="text-pink-200 text-xs">+2.1% 증가</p>
+                            </div>
+                            <Heart className="h-8 w-8 text-pink-200" />
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      <Card className="bg-black/30 border-purple-500/20">
+                        <CardHeader>
+                          <CardTitle className="text-white">인기 카테고리</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                              <span className="text-gray-300">K-Pop</span>
+                              <div className="flex items-center space-x-2">
+                                <div className="w-20 bg-gray-700 rounded-full h-2">
+                                  <div className="bg-purple-500 h-2 rounded-full" style={{width: '85%'}}></div>
+                                </div>
+                                <span className="text-purple-400 text-sm">85%</span>
+                              </div>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-gray-300">K-Beauty</span>
+                              <div className="flex items-center space-x-2">
+                                <div className="w-20 bg-gray-700 rounded-full h-2">
+                                  <div className="bg-purple-500 h-2 rounded-full" style={{width: '72%'}}></div>
+                                </div>
+                                <span className="text-purple-400 text-sm">72%</span>
+                              </div>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-gray-300">게임</span>
+                              <div className="flex items-center space-x-2">
+                                <div className="w-20 bg-gray-700 rounded-full h-2">
+                                  <div className="bg-purple-500 h-2 rounded-full" style={{width: '68%'}}></div>
+                                </div>
+                                <span className="text-purple-400 text-sm">68%</span>
+                              </div>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-gray-300">라이프스타일</span>
+                              <div className="flex items-center space-x-2">
+                                <div className="w-20 bg-gray-700 rounded-full h-2">
+                                  <div className="bg-purple-500 h-2 rounded-full" style={{width: '45%'}}></div>
+                                </div>
+                                <span className="text-purple-400 text-sm">45%</span>
+                              </div>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                      <Card className="bg-black/30 border-purple-500/20">
+                        <CardHeader>
+                          <CardTitle className="text-white">업로드 시간대 분석</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="h-48 flex items-center justify-center text-gray-400">
+                            <div className="text-center">
+                              <BarChart3 className="h-12 w-12 mx-auto mb-2" />
+                              <p>시간대별 업로드 현황</p>
+                              <p className="text-xs">24시간 기준</p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  </TabsContent>
+
+                  {/* 수익 분석 */}
+                  <TabsContent value="revenue-analytics" className="space-y-6 mt-6">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <Card className="bg-gradient-to-br from-green-600 to-green-800">
+                        <CardContent className="p-4 text-white">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-green-100 text-sm">월간 총 수익</p>
+                              <p className="text-2xl font-bold">₩18.5M</p>
+                              <p className="text-green-200 text-xs">+24% 증가</p>
+                            </div>
+                            <DollarSign className="h-8 w-8 text-green-200" />
+                          </div>
+                        </CardContent>
+                      </Card>
+                      <Card className="bg-gradient-to-br from-blue-600 to-blue-800">
+                        <CardContent className="p-4 text-white">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-blue-100 text-sm">슈퍼챗 수익</p>
+                              <p className="text-2xl font-bold">₩8.2M</p>
+                              <p className="text-blue-200 text-xs">+42% 증가</p>
+                            </div>
+                            <MessageSquare className="h-8 w-8 text-blue-200" />
+                          </div>
+                        </CardContent>
+                      </Card>
+                      <Card className="bg-gradient-to-br from-purple-600 to-purple-800">
+                        <CardContent className="p-4 text-white">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-purple-100 text-sm">플랫폼 수수료</p>
+                              <p className="text-2xl font-bold">₩2.1M</p>
+                              <p className="text-purple-200 text-xs">+18% 증가</p>
+                            </div>
+                            <TrendingUp className="h-8 w-8 text-purple-200" />
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      <Card className="bg-black/30 border-purple-500/20">
+                        <CardHeader>
+                          <CardTitle className="text-white">수익 구성 비율</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-4">
+                            <div className="flex justify-between items-center">
+                              <span className="text-gray-300">슈퍼챗</span>
+                              <div className="flex items-center space-x-2">
+                                <div className="w-32 bg-gray-700 rounded-full h-3">
+                                  <div className="bg-blue-500 h-3 rounded-full" style={{width: '44%'}}></div>
+                                </div>
+                                <span className="text-blue-400 font-semibold">44%</span>
+                              </div>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-gray-300">멤버십</span>
+                              <div className="flex items-center space-x-2">
+                                <div className="w-32 bg-gray-700 rounded-full h-3">
+                                  <div className="bg-green-500 h-3 rounded-full" style={{width: '28%'}}></div>
+                                </div>
+                                <span className="text-green-400 font-semibold">28%</span>
+                              </div>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-gray-300">광고 수익</span>
+                              <div className="flex items-center space-x-2">
+                                <div className="w-32 bg-gray-700 rounded-full h-3">
+                                  <div className="bg-yellow-500 h-3 rounded-full" style={{width: '17%'}}></div>
+                                </div>
+                                <span className="text-yellow-400 font-semibold">17%</span>
+                              </div>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-gray-300">기타</span>
+                              <div className="flex items-center space-x-2">
+                                <div className="w-32 bg-gray-700 rounded-full h-3">
+                                  <div className="bg-purple-500 h-3 rounded-full" style={{width: '11%'}}></div>
+                                </div>
+                                <span className="text-purple-400 font-semibold">11%</span>
+                              </div>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                      <Card className="bg-black/30 border-purple-500/20">
+                        <CardHeader>
+                          <CardTitle className="text-white">TOP 크리에이터 수익</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-3">
+                            <div className="flex items-center justify-between p-2 bg-gray-800 rounded">
+                              <div className="flex items-center space-x-2">
+                                <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center">
+                                  <span className="text-white text-sm font-bold">1</span>
+                                </div>
+                                <span className="text-white font-medium">크리에이터A</span>
+                              </div>
+                              <span className="text-green-400 font-semibold">₩2.4M</span>
+                            </div>
+                            <div className="flex items-center justify-between p-2 bg-gray-800 rounded">
+                              <div className="flex items-center space-x-2">
+                                <div className="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center">
+                                  <span className="text-white text-sm font-bold">2</span>
+                                </div>
+                                <span className="text-white font-medium">크리에이터B</span>
+                              </div>
+                              <span className="text-green-400 font-semibold">₩1.8M</span>
+                            </div>
+                            <div className="flex items-center justify-between p-2 bg-gray-800 rounded">
+                              <div className="flex items-center space-x-2">
+                                <div className="w-8 h-8 bg-amber-600 rounded-full flex items-center justify-center">
+                                  <span className="text-white text-sm font-bold">3</span>
+                                </div>
+                                <span className="text-white font-medium">크리에이터C</span>
+                              </div>
+                              <span className="text-green-400 font-semibold">₩1.2M</span>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  </TabsContent>
+
+                  {/* 트래픽 분석 */}
+                  <TabsContent value="traffic-analytics" className="space-y-6 mt-6">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                      <Card className="bg-gradient-to-br from-indigo-600 to-indigo-800">
+                        <CardContent className="p-4 text-white">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-indigo-100 text-sm">일간 페이지뷰</p>
+                              <p className="text-2xl font-bold">124K</p>
+                              <p className="text-indigo-200 text-xs">+15% 증가</p>
+                            </div>
+                            <Eye className="h-8 w-8 text-indigo-200" />
+                          </div>
+                        </CardContent>
+                      </Card>
+                      <Card className="bg-gradient-to-br from-cyan-600 to-cyan-800">
+                        <CardContent className="p-4 text-white">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-cyan-100 text-sm">평균 체류시간</p>
+                              <p className="text-2xl font-bold">18.4분</p>
+                              <p className="text-cyan-200 text-xs">+8% 증가</p>
+                            </div>
+                            <Clock className="h-8 w-8 text-cyan-200" />
+                          </div>
+                        </CardContent>
+                      </Card>
+                      <Card className="bg-gradient-to-br from-teal-600 to-teal-800">
+                        <CardContent className="p-4 text-white">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-teal-100 text-sm">이탈률</p>
+                              <p className="text-2xl font-bold">32.1%</p>
+                              <p className="text-teal-200 text-xs">-5% 개선</p>
+                            </div>
+                            <TrendingUp className="h-8 w-8 text-teal-200" />
+                          </div>
+                        </CardContent>
+                      </Card>
+                      <Card className="bg-gradient-to-br from-emerald-600 to-emerald-800">
+                        <CardContent className="p-4 text-white">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-emerald-100 text-sm">신규 방문자</p>
+                              <p className="text-2xl font-bold">67.8%</p>
+                              <p className="text-emerald-200 text-xs">+12% 증가</p>
+                            </div>
+                            <Users className="h-8 w-8 text-emerald-200" />
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      <Card className="bg-black/30 border-purple-500/20">
+                        <CardHeader>
+                          <CardTitle className="text-white">접속 디바이스 분석</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-4">
+                            <div className="flex justify-between items-center">
+                              <span className="text-gray-300">모바일</span>
+                              <div className="flex items-center space-x-2">
+                                <div className="w-24 bg-gray-700 rounded-full h-3">
+                                  <div className="bg-blue-500 h-3 rounded-full" style={{width: '67%'}}></div>
+                                </div>
+                                <span className="text-blue-400 font-semibold">67.2%</span>
+                              </div>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-gray-300">데스크톱</span>
+                              <div className="flex items-center space-x-2">
+                                <div className="w-24 bg-gray-700 rounded-full h-3">
+                                  <div className="bg-green-500 h-3 rounded-full" style={{width: '28%'}}></div>
+                                </div>
+                                <span className="text-green-400 font-semibold">28.4%</span>
+                              </div>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-gray-300">태블릿</span>
+                              <div className="flex items-center space-x-2">
+                                <div className="w-24 bg-gray-700 rounded-full h-3">
+                                  <div className="bg-purple-500 h-3 rounded-full" style={{width: '4%'}}></div>
+                                </div>
+                                <span className="text-purple-400 font-semibold">4.4%</span>
+                              </div>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                      <Card className="bg-black/30 border-purple-500/20">
+                        <CardHeader>
+                          <CardTitle className="text-white">지역별 접속 현황</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-3">
+                            <div className="flex justify-between items-center">
+                              <span className="text-gray-300">대한민국</span>
+                              <span className="text-purple-400 font-semibold">78.4%</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-gray-300">일본</span>
+                              <span className="text-purple-400 font-semibold">8.7%</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-gray-300">미국</span>
+                              <span className="text-purple-400 font-semibold">4.2%</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-gray-300">중국</span>
+                              <span className="text-purple-400 font-semibold">3.1%</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-gray-300">기타</span>
+                              <span className="text-purple-400 font-semibold">5.6%</span>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  </TabsContent>
+
+                  {/* 실시간 모니터링 */}
+                  <TabsContent value="realtime-monitoring" className="space-y-6 mt-6">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                      <Card className="bg-gradient-to-br from-red-600 to-red-800">
+                        <CardContent className="p-4 text-white">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-red-100 text-sm">현재 접속자</p>
+                              <p className="text-2xl font-bold">1,247</p>
+                              <p className="text-red-200 text-xs">실시간</p>
+                            </div>
+                            <Users className="h-8 w-8 text-red-200" />
+                          </div>
+                        </CardContent>
+                      </Card>
+                      <Card className="bg-gradient-to-br from-orange-600 to-orange-800">
+                        <CardContent className="p-4 text-white">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-orange-100 text-sm">진행 중 라이브</p>
+                              <p className="text-2xl font-bold">23</p>
+                              <p className="text-orange-200 text-xs">활성 스트림</p>
+                            </div>
+                            <Play className="h-8 w-8 text-orange-200" />
+                          </div>
+                        </CardContent>
+                      </Card>
+                      <Card className="bg-gradient-to-br from-yellow-600 to-yellow-800">
+                        <CardContent className="p-4 text-white">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-yellow-100 text-sm">시청 중 사용자</p>
+                              <p className="text-2xl font-bold">856</p>
+                              <p className="text-yellow-200 text-xs">라이브 시청자</p>
+                            </div>
+                            <Eye className="h-8 w-8 text-yellow-200" />
+                          </div>
+                        </CardContent>
+                      </Card>
+                      <Card className="bg-gradient-to-br from-pink-600 to-pink-800">
+                        <CardContent className="p-4 text-white">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-pink-100 text-sm">서버 상태</p>
+                              <p className="text-2xl font-bold">99.8%</p>
+                              <p className="text-pink-200 text-xs">가동률</p>
+                            </div>
+                            <CheckCircle className="h-8 w-8 text-pink-200" />
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      <Card className="bg-black/30 border-purple-500/20">
+                        <CardHeader>
+                          <CardTitle className="text-white">실시간 라이브 스트림</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-3 max-h-64 overflow-y-auto">
+                            <div className="flex items-center justify-between p-2 bg-gray-800 rounded">
+                              <div className="flex items-center space-x-2">
+                                <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
+                                <span className="text-white font-medium">K-Pop 댄스 커버</span>
+                              </div>
+                              <span className="text-red-400 font-semibold">234명 시청</span>
+                            </div>
+                            <div className="flex items-center justify-between p-2 bg-gray-800 rounded">
+                              <div className="flex items-center space-x-2">
+                                <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
+                                <span className="text-white font-medium">게임 스트리밍</span>
+                              </div>
+                              <span className="text-red-400 font-semibold">187명 시청</span>
+                            </div>
+                            <div className="flex items-center justify-between p-2 bg-gray-800 rounded">
+                              <div className="flex items-center space-x-2">
+                                <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
+                                <span className="text-white font-medium">메이크업 튜토리얼</span>
+                              </div>
+                              <span className="text-red-400 font-semibold">156명 시청</span>
+                            </div>
+                            <div className="flex items-center justify-between p-2 bg-gray-800 rounded">
+                              <div className="flex items-center space-x-2">
+                                <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
+                                <span className="text-white font-medium">요리 방송</span>
+                              </div>
+                              <span className="text-red-400 font-semibold">98명 시청</span>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                      <Card className="bg-black/30 border-purple-500/20">
+                        <CardHeader>
+                          <CardTitle className="text-white">시스템 리소스</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-4">
+                            <div>
+                              <div className="flex justify-between items-center mb-1">
+                                <span className="text-gray-300">CPU 사용률</span>
+                                <span className="text-purple-400 font-semibold">68%</span>
+                              </div>
+                              <div className="w-full bg-gray-700 rounded-full h-2">
+                                <div className="bg-purple-500 h-2 rounded-full" style={{width: '68%'}}></div>
+                              </div>
+                            </div>
+                            <div>
+                              <div className="flex justify-between items-center mb-1">
+                                <span className="text-gray-300">메모리 사용률</span>
+                                <span className="text-blue-400 font-semibold">45%</span>
+                              </div>
+                              <div className="w-full bg-gray-700 rounded-full h-2">
+                                <div className="bg-blue-500 h-2 rounded-full" style={{width: '45%'}}></div>
+                              </div>
+                            </div>
+                            <div>
+                              <div className="flex justify-between items-center mb-1">
+                                <span className="text-gray-300">디스크 사용률</span>
+                                <span className="text-green-400 font-semibold">32%</span>
+                              </div>
+                              <div className="w-full bg-gray-700 rounded-full h-2">
+                                <div className="bg-green-500 h-2 rounded-full" style={{width: '32%'}}></div>
+                              </div>
+                            </div>
+                            <div>
+                              <div className="flex justify-between items-center mb-1">
+                                <span className="text-gray-300">네트워크 대역폭</span>
+                                <span className="text-yellow-400 font-semibold">78%</span>
+                              </div>
+                              <div className="w-full bg-gray-700 rounded-full h-2">
+                                <div className="bg-yellow-500 h-2 rounded-full" style={{width: '78%'}}></div>
+                              </div>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  </TabsContent>
+                </Tabs>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* 플랫폼 설정 탭 */}
+          <TabsContent value="settings" className="space-y-6">
+            <Card className="bg-black/30 border-purple-500/20">
+              <CardHeader>
+                <CardTitle className="text-white flex items-center">
+                  <Settings className="h-5 w-5 mr-2" />
+                  플랫폼 설정 관리
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Tabs defaultValue="system-settings" className="w-full">
+                  <TabsList className="grid w-full grid-cols-6">
+                    <TabsTrigger value="system-settings">시스템 설정</TabsTrigger>
+                    <TabsTrigger value="content-policy">콘텐츠 정책</TabsTrigger>
+                    <TabsTrigger value="monetization">수익화 설정</TabsTrigger>
+                    <TabsTrigger value="security">보안 설정</TabsTrigger>
+                    <TabsTrigger value="notifications">알림 설정</TabsTrigger>
+                    <TabsTrigger value="categories">카테고리 관리</TabsTrigger>
+                  </TabsList>
+
+                  {/* 시스템 설정 */}
+                  <TabsContent value="system-settings" className="space-y-6 mt-6">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      <Card className="bg-gray-800/50">
+                        <CardHeader>
+                          <CardTitle className="text-white text-lg">기본 플랫폼 설정</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                          <div className="space-y-2">
+                            <Label className="text-gray-300">플랫폼 이름</Label>
+                            <Input defaultValue="PIYAKast" className="bg-gray-700 border-gray-600" />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-gray-300">플랫폼 설명</Label>
+                            <Textarea 
+                              defaultValue="K-Culture 중심의 라이브 스트리밍 및 동영상 플랫폼" 
+                              className="bg-gray-700 border-gray-600" 
+                              rows={3}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-gray-300">기본 언어</Label>
+                            <Select defaultValue="ko">
+                              <SelectTrigger className="bg-gray-700 border-gray-600">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="ko">한국어</SelectItem>
+                                <SelectItem value="en">English</SelectItem>
+                                <SelectItem value="ja">日本語</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <input type="checkbox" id="maintenance" defaultChecked={false} />
+                            <Label htmlFor="maintenance" className="text-gray-300">점검 모드</Label>
+                          </div>
+                          <Button className="w-full bg-purple-600 hover:bg-purple-700">
+                            설정 저장
+                          </Button>
+                        </CardContent>
+                      </Card>
+
+                      <Card className="bg-gray-800/50">
+                        <CardHeader>
+                          <CardTitle className="text-white text-lg">업로드 제한 설정</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                          <div className="space-y-2">
+                            <Label className="text-gray-300">최대 파일 크기 (GB)</Label>
+                            <Input type="number" defaultValue="2" className="bg-gray-700 border-gray-600" />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-gray-300">최대 동영상 길이 (시간)</Label>
+                            <Input type="number" defaultValue="4" className="bg-gray-700 border-gray-600" />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-gray-300">지원 파일 형식</Label>
+                            <Input defaultValue="mp4, mov, avi, mkv" className="bg-gray-700 border-gray-600" />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-gray-300">일일 업로드 제한 (개)</Label>
+                            <Input type="number" defaultValue="10" className="bg-gray-700 border-gray-600" />
+                          </div>
+                          <Button className="w-full bg-purple-600 hover:bg-purple-700">
+                            제한 설정 저장
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  </TabsContent>
+
+                  {/* 콘텐츠 정책 */}
+                  <TabsContent value="content-policy" className="space-y-6 mt-6">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      <Card className="bg-gray-800/50">
+                        <CardHeader>
+                          <CardTitle className="text-white text-lg">콘텐츠 검열 정책</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                          <div className="flex items-center space-x-2">
+                            <input type="checkbox" id="auto-moderation" defaultChecked={true} />
+                            <Label htmlFor="auto-moderation" className="text-gray-300">자동 검열 활성화</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <input type="checkbox" id="explicit-content" defaultChecked={false} />
+                            <Label htmlFor="explicit-content" className="text-gray-300">성인 콘텐츠 허용</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <input type="checkbox" id="violence-content" defaultChecked={false} />
+                            <Label htmlFor="violence-content" className="text-gray-300">폭력 콘텐츠 허용</Label>
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-gray-300">금지 키워드</Label>
+                            <Textarea 
+                              placeholder="금지할 키워드를 줄바꿈으로 구분해서 입력" 
+                              className="bg-gray-700 border-gray-600" 
+                              rows={4}
+                            />
+                          </div>
+                          <Button className="w-full bg-purple-600 hover:bg-purple-700">
+                            정책 저장
+                          </Button>
+                        </CardContent>
+                      </Card>
+
+                      <Card className="bg-gray-800/50">
+                        <CardHeader>
+                          <CardTitle className="text-white text-lg">저작권 보호 설정</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                          <div className="flex items-center space-x-2">
+                            <input type="checkbox" id="copyright-detection" defaultChecked={true} />
+                            <Label htmlFor="copyright-detection" className="text-gray-300">저작권 자동 감지</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <input type="checkbox" id="dmca-protection" defaultChecked={true} />
+                            <Label htmlFor="dmca-protection" className="text-gray-300">DMCA 보호 활성화</Label>
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-gray-300">저작권 신고 처리 시간 (시간)</Label>
+                            <Input type="number" defaultValue="24" className="bg-gray-700 border-gray-600" />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-gray-300">반복 위반 제재</Label>
+                            <Select defaultValue="warn">
+                              <SelectTrigger className="bg-gray-700 border-gray-600">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="warn">경고</SelectItem>
+                                <SelectItem value="suspend">일시 정지</SelectItem>
+                                <SelectItem value="ban">영구 정지</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <Button className="w-full bg-purple-600 hover:bg-purple-700">
+                            보호 설정 저장
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  </TabsContent>
+
+                  {/* 수익화 설정 */}
+                  <TabsContent value="monetization" className="space-y-6 mt-6">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      <Card className="bg-gray-800/50">
+                        <CardHeader>
+                          <CardTitle className="text-white text-lg">슈퍼챗 설정</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                          <div className="flex items-center space-x-2">
+                            <input type="checkbox" id="superchat-enabled" defaultChecked={true} />
+                            <Label htmlFor="superchat-enabled" className="text-gray-300">슈퍼챗 기능 활성화</Label>
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-gray-300">최소 금액 (원)</Label>
+                            <Input type="number" defaultValue="1000" className="bg-gray-700 border-gray-600" />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-gray-300">최대 금액 (원)</Label>
+                            <Input type="number" defaultValue="50000" className="bg-gray-700 border-gray-600" />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-gray-300">플랫폼 수수료 (%)</Label>
+                            <Input type="number" defaultValue="30" className="bg-gray-700 border-gray-600" />
+                          </div>
+                          <Button className="w-full bg-purple-600 hover:bg-purple-700">
+                            슈퍼챗 설정 저장
+                          </Button>
+                        </CardContent>
+                      </Card>
+
+                      <Card className="bg-gray-800/50">
+                        <CardHeader>
+                          <CardTitle className="text-white text-lg">멤버십 설정</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                          <div className="flex items-center space-x-2">
+                            <input type="checkbox" id="membership-enabled" defaultChecked={true} />
+                            <Label htmlFor="membership-enabled" className="text-gray-300">멤버십 기능 활성화</Label>
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-gray-300">기본 멤버십 가격 (원/월)</Label>
+                            <Input type="number" defaultValue="4900" className="bg-gray-700 border-gray-600" />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-gray-300">최대 멤버십 등급</Label>
+                            <Input type="number" defaultValue="5" className="bg-gray-700 border-gray-600" />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-gray-300">플랫폼 수수료 (%)</Label>
+                            <Input type="number" defaultValue="20" className="bg-gray-700 border-gray-600" />
+                          </div>
+                          <Button className="w-full bg-purple-600 hover:bg-purple-700">
+                            멤버십 설정 저장
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  </TabsContent>
+
+                  {/* 보안 설정 */}
+                  <TabsContent value="security" className="space-y-6 mt-6">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      <Card className="bg-gray-800/50">
+                        <CardHeader>
+                          <CardTitle className="text-white text-lg">인증 설정</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                          <div className="flex items-center space-x-2">
+                            <input type="checkbox" id="two-factor" defaultChecked={false} />
+                            <Label htmlFor="two-factor" className="text-gray-300">2단계 인증 필수</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <input type="checkbox" id="email-verification" defaultChecked={true} />
+                            <Label htmlFor="email-verification" className="text-gray-300">이메일 인증 필수</Label>
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-gray-300">비밀번호 최소 길이</Label>
+                            <Input type="number" defaultValue="8" className="bg-gray-700 border-gray-600" />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-gray-300">로그인 시도 제한 (회)</Label>
+                            <Input type="number" defaultValue="5" className="bg-gray-700 border-gray-600" />
+                          </div>
+                          <Button className="w-full bg-purple-600 hover:bg-purple-700">
+                            인증 설정 저장
+                          </Button>
+                        </CardContent>
+                      </Card>
+
+                      <Card className="bg-gray-800/50">
+                        <CardHeader>
+                          <CardTitle className="text-white text-lg">IP 차단 관리</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                          <div className="space-y-2">
+                            <Label className="text-gray-300">차단할 IP 주소</Label>
+                            <Input placeholder="예: 192.168.1.1" className="bg-gray-700 border-gray-600" />
+                          </div>
+                          <Button className="w-full mb-4 bg-red-600 hover:bg-red-700">
+                            IP 주소 차단
+                          </Button>
+                          <div className="max-h-48 overflow-y-auto space-y-2">
+                            <div className="text-sm text-gray-300 font-medium mb-2">차단된 IP 목록:</div>
+                            <div className="flex justify-between items-center p-2 bg-gray-700 rounded">
+                              <span className="text-gray-300">192.168.1.100</span>
+                              <Button size="sm" variant="outline" className="text-red-400">
+                                해제
+                              </Button>
+                            </div>
+                            <div className="flex justify-between items-center p-2 bg-gray-700 rounded">
+                              <span className="text-gray-300">10.0.0.50</span>
+                              <Button size="sm" variant="outline" className="text-red-400">
+                                해제
+                              </Button>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  </TabsContent>
+
+                  {/* 알림 설정 */}
+                  <TabsContent value="notifications" className="space-y-6 mt-6">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      <Card className="bg-gray-800/50">
+                        <CardHeader>
+                          <CardTitle className="text-white text-lg">시스템 알림</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                          <div className="flex items-center space-x-2">
+                            <input type="checkbox" id="system-alerts" defaultChecked={true} />
+                            <Label htmlFor="system-alerts" className="text-gray-300">시스템 장애 알림</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <input type="checkbox" id="security-alerts" defaultChecked={true} />
+                            <Label htmlFor="security-alerts" className="text-gray-300">보안 경고 알림</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <input type="checkbox" id="report-alerts" defaultChecked={true} />
+                            <Label htmlFor="report-alerts" className="text-gray-300">신고 접수 알림</Label>
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-gray-300">알림 이메일</Label>
+                            <Input defaultValue="admin@piyakast.kr" className="bg-gray-700 border-gray-600" />
+                          </div>
+                          <Button className="w-full bg-purple-600 hover:bg-purple-700">
+                            알림 설정 저장
+                          </Button>
+                        </CardContent>
+                      </Card>
+
+                      <Card className="bg-gray-800/50">
+                        <CardHeader>
+                          <CardTitle className="text-white text-lg">사용자 알림</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                          <div className="flex items-center space-x-2">
+                            <input type="checkbox" id="welcome-notification" defaultChecked={true} />
+                            <Label htmlFor="welcome-notification" className="text-gray-300">신규 가입 환영 알림</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <input type="checkbox" id="stream-notification" defaultChecked={true} />
+                            <Label htmlFor="stream-notification" className="text-gray-300">라이브 스트림 시작 알림</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <input type="checkbox" id="comment-notification" defaultChecked={false} />
+                            <Label htmlFor="comment-notification" className="text-gray-300">댓글 알림</Label>
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-gray-300">알림 발송 주기</Label>
+                            <Select defaultValue="realtime">
+                              <SelectTrigger className="bg-gray-700 border-gray-600">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="realtime">실시간</SelectItem>
+                                <SelectItem value="hourly">1시간마다</SelectItem>
+                                <SelectItem value="daily">하루 1회</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <Button className="w-full bg-purple-600 hover:bg-purple-700">
+                            사용자 알림 저장
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  </TabsContent>
+
+                  {/* 카테고리 관리 */}
+                  <TabsContent value="categories" className="space-y-6 mt-6">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      <Card className="bg-gray-800/50">
+                        <CardHeader>
+                          <CardTitle className="text-white text-lg">새 카테고리 추가</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                          <div className="space-y-2">
+                            <Label className="text-gray-300">카테고리 이름</Label>
+                            <Input placeholder="예: K-Fashion" className="bg-gray-700 border-gray-600" />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-gray-300">카테고리 설명</Label>
+                            <Textarea 
+                              placeholder="카테고리에 대한 설명을 입력하세요" 
+                              className="bg-gray-700 border-gray-600" 
+                              rows={3}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-gray-300">카테고리 색상</Label>
+                            <Input type="color" defaultValue="#8b5cf6" className="bg-gray-700 border-gray-600 h-10" />
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <input type="checkbox" id="category-active" defaultChecked={true} />
+                            <Label htmlFor="category-active" className="text-gray-300">활성화</Label>
+                          </div>
+                          <Button className="w-full bg-purple-600 hover:bg-purple-700">
+                            카테고리 추가
+                          </Button>
+                        </CardContent>
+                      </Card>
+
+                      <Card className="bg-gray-800/50">
+                        <CardHeader>
+                          <CardTitle className="text-white text-lg">기존 카테고리 관리</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-3 max-h-64 overflow-y-auto">
+                            <div className="flex items-center justify-between p-3 bg-gray-700 rounded">
+                              <div className="flex items-center space-x-3">
+                                <div className="w-4 h-4 bg-purple-500 rounded"></div>
+                                <span className="text-white font-medium">K-Pop</span>
+                              </div>
+                              <div className="flex space-x-2">
+                                <Button size="sm" variant="outline">수정</Button>
+                                <Button size="sm" variant="outline" className="text-red-400">삭제</Button>
+                              </div>
+                            </div>
+                            <div className="flex items-center justify-between p-3 bg-gray-700 rounded">
+                              <div className="flex items-center space-x-3">
+                                <div className="w-4 h-4 bg-pink-500 rounded"></div>
+                                <span className="text-white font-medium">K-Beauty</span>
+                              </div>
+                              <div className="flex space-x-2">
+                                <Button size="sm" variant="outline">수정</Button>
+                                <Button size="sm" variant="outline" className="text-red-400">삭제</Button>
+                              </div>
+                            </div>
+                            <div className="flex items-center justify-between p-3 bg-gray-700 rounded">
+                              <div className="flex items-center space-x-3">
+                                <div className="w-4 h-4 bg-blue-500 rounded"></div>
+                                <span className="text-white font-medium">K-Drama</span>
+                              </div>
+                              <div className="flex space-x-2">
+                                <Button size="sm" variant="outline">수정</Button>
+                                <Button size="sm" variant="outline" className="text-red-400">삭제</Button>
+                              </div>
+                            </div>
+                            <div className="flex items-center justify-between p-3 bg-gray-700 rounded">
+                              <div className="flex items-center space-x-3">
+                                <div className="w-4 h-4 bg-green-500 rounded"></div>
+                                <span className="text-white font-medium">게임</span>
+                              </div>
+                              <div className="flex space-x-2">
+                                <Button size="sm" variant="outline">수정</Button>
+                                <Button size="sm" variant="outline" className="text-red-400">삭제</Button>
+                              </div>
+                            </div>
+                            <div className="flex items-center justify-between p-3 bg-gray-700 rounded">
+                              <div className="flex items-center space-x-3">
+                                <div className="w-4 h-4 bg-yellow-500 rounded"></div>
+                                <span className="text-white font-medium">라이프스타일</span>
+                              </div>
+                              <div className="flex space-x-2">
+                                <Button size="sm" variant="outline">수정</Button>
+                                <Button size="sm" variant="outline" className="text-red-400">삭제</Button>
+                              </div>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  </TabsContent>
+                </Tabs>
+              </CardContent>
+            </Card>
