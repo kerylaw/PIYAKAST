@@ -8,6 +8,14 @@ The application is built as a full-stack web platform with modern technologies, 
 
 ## Recent Changes (January 2025)
 
+✓ **완전한 PeerTube 기반 스트리밍 시스템 완성 (2025-08-07)**:
+  - 데이터베이스에 누락된 PeerTube 컬럼들 추가 (peertube_id, peertube_uuid, peertube_embed_url)
+  - 로그아웃 기능 완전 수정 (POST 메서드로 변경, 정상 작동 확인)
+  - 웹캠 기능 완전 구현 (카메라 시작, 비디오/오디오 토글, 스트림 미리보기)
+  - TypeScript 에러 수정 (passport-kakao 타입 이슈 해결)
+  - 스트림 생성 테스트 성공 (여러 브라우저에서 확인)
+  - PeerTube 연결 실패 시 로컬 저장소 폴백 정상 작동
+
 ✓ **Agora SDK 완전 제거 및 UI 개선 (2025-01-07)**:
   - Agora SDK 패키지 및 관련 코드 완전 삭제
   - LiveStreamModal과 LiveStreamViewer에서 Agora 참조 제거
