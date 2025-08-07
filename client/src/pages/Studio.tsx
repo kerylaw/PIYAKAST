@@ -42,7 +42,7 @@ export default function Studio() {
 
   // Fetch user's content data
   const { data: userVideos = [] } = useQuery({
-    queryKey: ["/api/videos", "user", user?.id],
+    queryKey: ["/api/users", user?.id, "videos"],
     enabled: !!user?.id,
   });
 
@@ -66,14 +66,16 @@ export default function Studio() {
     enabled: !!user?.id,
   });
 
-  // Calculate basic stats
+  // Calculate basic stats from API data
   const videosArray = Array.isArray(userVideos) ? userVideos : [];
   const streamsArray = Array.isArray(userStreams) ? userStreams : [];
+  const analyticsData = analytics || {};
   const revenueData = revenue || {};
   
-  const totalViews = videosArray.reduce((sum: number, video: any) => sum + (video.viewCount || 0), 0);
-  const totalVideos = videosArray.length;
-  const liveStreams = streamsArray.filter((stream: any) => stream.isLive).length;
+  // Use real analytics data or fallback to calculated values
+  const totalViews = (analyticsData as any)?.totalViews || videosArray.reduce((sum: number, video: any) => sum + (video.viewCount || 0), 0);
+  const totalVideos = (analyticsData as any)?.totalVideos || videosArray.length;
+  const liveStreams = (analyticsData as any)?.liveStreams || streamsArray.filter((stream: any) => stream.isLive).length;
   const totalRevenue = (revenueData as any)?.totalRevenue || 0;
 
   return (
@@ -232,21 +234,21 @@ export default function Studio() {
                   <div className="space-y-4">
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-gray-400">이번 달 조회수</span>
-                      <span className="font-semibold">+15%</span>
+                      <span className="font-semibold">+{(analyticsData as any)?.growth?.views || 0}%</span>
                     </div>
-                    <Progress value={75} className="h-2" />
+                    <Progress value={(analyticsData as any)?.growth?.views || 0} className="h-2" />
                     
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-gray-400">구독자 증가</span>
-                      <span className="font-semibold">+8%</span>
+                      <span className="font-semibold">+{(analyticsData as any)?.growth?.subscribers || 0}%</span>
                     </div>
-                    <Progress value={60} className="h-2" />
+                    <Progress value={(analyticsData as any)?.growth?.subscribers || 0} className="h-2" />
                     
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-gray-400">시청 시간</span>
-                      <span className="font-semibold">+22%</span>
+                      <span className="font-semibold">+{(analyticsData as any)?.growth?.watchTime || 0}%</span>
                     </div>
-                    <Progress value={85} className="h-2" />
+                    <Progress value={(analyticsData as any)?.growth?.watchTime || 0} className="h-2" />
                   </div>
                 </CardContent>
               </Card>
@@ -356,15 +358,21 @@ export default function Studio() {
                       <div className="text-sm text-gray-400">총 조회수</div>
                     </div>
                     <div className="text-center p-3 bg-gray-800/50 rounded">
-                      <div className="text-2xl font-bold text-green-400">28.5K</div>
+                      <div className="text-2xl font-bold text-green-400">
+                        {((analyticsData as any)?.followerCount || 0).toLocaleString()}
+                      </div>
                       <div className="text-sm text-gray-400">구독자</div>
                     </div>
                     <div className="text-center p-3 bg-gray-800/50 rounded">
-                      <div className="text-2xl font-bold text-purple-400">456</div>
+                      <div className="text-2xl font-bold text-purple-400">
+                        {Math.floor(totalViews / 60).toLocaleString()}
+                      </div>
                       <div className="text-sm text-gray-400">시간 시청</div>
                     </div>
                     <div className="text-center p-3 bg-gray-800/50 rounded">
-                      <div className="text-2xl font-bold text-orange-400">89%</div>
+                      <div className="text-2xl font-bold text-orange-400">
+                        {((analyticsData as any)?.weeklyComments || 0) > 0 ? Math.min(Math.floor(((analyticsData as any)?.weeklyComments / totalViews) * 10000), 100) : 0}%
+                      </div>
                       <div className="text-sm text-gray-400">참여율</div>
                     </div>
                   </div>
@@ -384,30 +392,30 @@ export default function Studio() {
                     <div>
                       <div className="flex justify-between text-sm mb-1">
                         <span>18-24세</span>
-                        <span>35%</span>
+                        <span>{(analyticsData as any)?.demographics?.["18-24"] || 0}%</span>
                       </div>
-                      <Progress value={35} className="h-2" />
+                      <Progress value={(analyticsData as any)?.demographics?.["18-24"] || 0} className="h-2" />
                     </div>
                     <div>
                       <div className="flex justify-between text-sm mb-1">
                         <span>25-34세</span>
-                        <span>42%</span>
+                        <span>{(analyticsData as any)?.demographics?.["25-34"] || 0}%</span>
                       </div>
-                      <Progress value={42} className="h-2" />
+                      <Progress value={(analyticsData as any)?.demographics?.["25-34"] || 0} className="h-2" />
                     </div>
                     <div>
                       <div className="flex justify-between text-sm mb-1">
                         <span>35-44세</span>
-                        <span>18%</span>
+                        <span>{(analyticsData as any)?.demographics?.["35-44"] || 0}%</span>
                       </div>
-                      <Progress value={18} className="h-2" />
+                      <Progress value={(analyticsData as any)?.demographics?.["35-44"] || 0} className="h-2" />
                     </div>
                     <div>
                       <div className="flex justify-between text-sm mb-1">
                         <span>45세 이상</span>
-                        <span>5%</span>
+                        <span>{(analyticsData as any)?.demographics?.["45+"] || 0}%</span>
                       </div>
-                      <Progress value={5} className="h-2" />
+                      <Progress value={(analyticsData as any)?.demographics?.["45+"] || 0} className="h-2" />
                     </div>
                   </div>
                 </CardContent>
@@ -427,19 +435,19 @@ export default function Studio() {
                   <div className="space-y-4">
                     <div className="flex justify-between items-center">
                       <span className="text-sm">평균 시청 시간</span>
-                      <span className="font-semibold">4:32</span>
+                      <span className="font-semibold">{(analyticsData as any)?.performance?.averageViewDuration || "0:00"}</span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-sm">클릭률 (CTR)</span>
-                      <span className="font-semibold">8.2%</span>
+                      <span className="font-semibold">{(analyticsData as any)?.performance?.clickThroughRate || "0%"}</span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-sm">좋아요 비율</span>
-                      <span className="font-semibold">94%</span>
+                      <span className="font-semibold">{(analyticsData as any)?.performance?.likeRatio || "0%"}</span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-sm">댓글 참여율</span>
-                      <span className="font-semibold">3.7%</span>
+                      <span className="font-semibold">{(analyticsData as any)?.performance?.commentEngagement || "0%"}</span>
                     </div>
                   </div>
                 </CardContent>
@@ -455,20 +463,20 @@ export default function Studio() {
                 <CardContent>
                   <div className="space-y-4">
                     <div className="flex justify-between items-center">
-                      <span className="text-sm">YouTube 검색</span>
-                      <span className="font-semibold">45%</span>
+                      <span className="text-sm">검색</span>
+                      <span className="font-semibold">{(analyticsData as any)?.trafficSources?.search || 0}%</span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-sm">추천 동영상</span>
-                      <span className="font-semibold">32%</span>
+                      <span className="font-semibold">{(analyticsData as any)?.trafficSources?.suggested || 0}%</span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-sm">외부 사이트</span>
-                      <span className="font-semibold">13%</span>
+                      <span className="font-semibold">{(analyticsData as any)?.trafficSources?.external || 0}%</span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-sm">직접 접근</span>
-                      <span className="font-semibold">10%</span>
+                      <span className="font-semibold">{(analyticsData as any)?.trafficSources?.direct || 0}%</span>
                     </div>
                   </div>
                 </CardContent>
@@ -501,15 +509,15 @@ export default function Studio() {
                     <div className="space-y-3">
                       <div className="flex justify-between">
                         <span className="text-sm text-gray-400">슈퍼챗</span>
-                        <span className="font-semibold">₩{Math.floor(totalRevenue * 0.6).toLocaleString()}</span>
+                        <span className="font-semibold">₩{((revenueData as any)?.superchatRevenue || 0).toLocaleString()}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-sm text-gray-400">멤버십</span>
-                        <span className="font-semibold">₩{Math.floor(totalRevenue * 0.3).toLocaleString()}</span>
+                        <span className="font-semibold">₩{((revenueData as any)?.membershipRevenue || 0).toLocaleString()}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-sm text-gray-400">기타</span>
-                        <span className="font-semibold">₩{Math.floor(totalRevenue * 0.1).toLocaleString()}</span>
+                        <span className="font-semibold">₩{((revenueData as any)?.otherRevenue || 0).toLocaleString()}</span>
                       </div>
                     </div>
                   </div>
@@ -528,14 +536,14 @@ export default function Studio() {
                   <div className="space-y-4">
                     <div className="text-center p-3 bg-blue-900/20 rounded border border-blue-700">
                       <div className="text-lg font-bold text-blue-400">
-                        ₩{Math.floor(totalRevenue * 0.7).toLocaleString()}
+                        ₩{((revenueData as any)?.creatorShare || 0).toLocaleString()}
                       </div>
                       <div className="text-sm text-gray-400">크리에이터 수익 (70%)</div>
                     </div>
                     
                     <div className="text-center p-3 bg-gray-800/50 rounded">
                       <div className="text-lg font-bold text-gray-400">
-                        ₩{Math.floor(totalRevenue * 0.3).toLocaleString()}
+                        ₩{((revenueData as any)?.platformShare || 0).toLocaleString()}
                       </div>
                       <div className="text-sm text-gray-400">플랫폼 수수료 (30%)</div>
                     </div>

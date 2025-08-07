@@ -97,6 +97,7 @@ export interface IStorage {
   updatePaymentStatus(id: string, status: string, metadata?: any): Promise<Payment>;
   getPayment(id: string): Promise<Payment | undefined>;
   getPaymentsByUser(userId: string): Promise<Payment[]>;
+  getPaymentsByStream(streamId: string): Promise<Payment[]>;
   
   // Superchat operations
   createSuperchat(superchat: InsertSuperchat): Promise<Superchat>;
@@ -290,7 +291,7 @@ export class DatabaseStorage implements IStorage {
   // Comment operations
   async createComment(comment: InsertComment): Promise<Comment> {
     const [createdComment] = await db.insert(comments).values(comment).returning();
-    return createdComment;
+    return createdComment as Comment;
   }
 
   async getCommentsByVideo(videoId: string): Promise<any[]> {
@@ -427,7 +428,7 @@ export class DatabaseStorage implements IStorage {
   // Enhanced Comment operations
   async createCommentWithParent(comment: InsertComment): Promise<Comment> {
     const [createdComment] = await db.insert(comments).values(comment).returning();
-    return createdComment;
+    return createdComment as Comment;
   }
 
   async getCommentReplies(commentId: string): Promise<Comment[]> {
@@ -531,6 +532,14 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(payments)
       .where(eq(payments.userId, userId))
+      .orderBy(desc(payments.createdAt));
+  }
+
+  async getPaymentsByStream(streamId: string): Promise<Payment[]> {
+    return await db
+      .select()
+      .from(payments)
+      .where(eq(payments.streamId, streamId))
       .orderBy(desc(payments.createdAt));
   }
 
