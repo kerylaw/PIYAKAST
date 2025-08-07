@@ -39,7 +39,7 @@ export default function CloudflareLiveModal({ isOpen, onClose }: CloudflareLiveM
 
   const createCloudflareStreamMutation = useMutation({
     mutationFn: async (data: { title: string; description: string; category: string }) => {
-      const response = await apiRequest("/api/streams/cloudflare", "POST", data);
+      const response = await apiRequest("POST", "/api/streams/cloudflare", data);
       return await response.json();
     },
     onSuccess: (response: any) => {
@@ -70,7 +70,7 @@ export default function CloudflareLiveModal({ isOpen, onClose }: CloudflareLiveM
 
   const endStreamMutation = useMutation({
     mutationFn: async (id: string) => {
-      return await apiRequest(`/api/streams/${id}/end`, "PATCH");
+      return await apiRequest("PATCH", `/api/streams/${id}/end`);
     },
     onSuccess: () => {
       stopLiveStream();
