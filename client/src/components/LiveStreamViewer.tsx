@@ -206,8 +206,8 @@ export default function LiveStreamViewer({
     <div className="flex h-screen bg-gray-100 dark:bg-gray-900">
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col">
-        {/* Video Player - 좌측 상단에 고정 */}
-        <div className="relative bg-black aspect-video w-full max-w-4xl">
+        {/* Video Player - 좌측에 완전히 붙이고 크기 대폭 확대 */}
+        <div className="relative bg-black aspect-video w-full max-w-6xl ml-0">
           {/* Stream Overlay */}
           <div className="absolute top-4 left-4 flex items-center space-x-2 z-10">
             <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
@@ -258,7 +258,7 @@ export default function LiveStreamViewer({
         </div>
 
         {/* Stream Info */}
-        <div className="p-4 bg-white dark:bg-gray-800">
+        <div className="p-6 bg-white dark:bg-gray-800">
           <div className="flex items-start justify-between">
             <div className="flex-1">
               <h1 className="text-xl font-bold mb-2">{title}</h1>
@@ -323,7 +323,7 @@ export default function LiveStreamViewer({
       </div>
 
       {/* Chat Sidebar - 우측 고정 */}
-      <div className="w-80 flex flex-col bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700">
+      <div className="w-96 flex flex-col bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700">
         <div className="p-4 border-b border-gray-200 dark:border-gray-700">
           <h3 className="font-semibold">Live Chat</h3>
           <p className="text-sm text-gray-500">{currentViewerCount} viewers</p>
