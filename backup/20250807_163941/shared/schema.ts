@@ -48,13 +48,6 @@ export const videos = pgTable("videos", {
   description: text("description"),
   thumbnailUrl: varchar("thumbnail_url"),
   videoUrl: varchar("video_url"),
-  // PeerTube integration fields
-  peertubeId: integer("peertube_id"),
-  peertubeUuid: varchar("peertube_uuid"),
-  peertubeEmbedUrl: varchar("peertube_embed_url"),
-  peertubeDownloadUrl: varchar("peertube_download_url"),
-  peertubeChannelId: integer("peertube_channel_id"),
-  // Original fields
   duration: integer("duration"), // in seconds
   viewCount: integer("view_count").default(0),
   category: varchar("category"),
@@ -70,16 +63,6 @@ export const streams = pgTable("streams", {
   title: text("title").notNull(),
   description: text("description"),
   category: varchar("category"),
-  // PeerTube live streaming fields
-  peertubeId: integer("peertube_id"),
-  peertubeUuid: varchar("peertube_uuid"),
-  peertubeEmbedUrl: varchar("peertube_embed_url"),
-  rtmpUrl: varchar("rtmp_url"),
-  streamKey: varchar("stream_key"),
-  peertubeChannelId: integer("peertube_channel_id"),
-  permanentLive: boolean("permanent_live").default(false),
-  saveReplay: boolean("save_replay").default(true),
-  // Original fields
   isLive: boolean("is_live").default(false),
   viewerCount: integer("viewer_count").default(0),
   startedAt: timestamp("started_at"),

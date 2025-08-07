@@ -8,14 +8,6 @@ The application is built as a full-stack web platform with modern technologies, 
 
 ## Recent Changes (January 2025)
 
-✓ **PeerTube 통합 시스템 구현 (2025-01-07)**:
-  - PeerTube API 클라이언트 완전 구현 (OAuth 2.0 인증, 비디오 업로드, 라이브 스트리밍)
-  - 하이브리드 비디오 시스템: PeerTube 우선, 로컬 백업
-  - 데이터베이스 스키마 확장: PeerTube 메타데이터 필드 추가
-  - PeerTubeEmbed 컴포넌트: 임베드 비디오 플레이어
-  - LiveStreamSetup 컴포넌트: OBS Studio 통합 가이드
-  - 기존 코드 완전 백업 및 보존
-
 ✓ **완전한 인증 시스템 구현 (2025-01-07)**:
   - Replit 인증 완전 제거 및 독립적인 인증 시스템 구축
   - 이메일/비밀번호 로그인 및 회원가입 기능
@@ -93,14 +85,11 @@ The schema uses UUID primary keys, proper foreign key relationships, and include
 - **Stream Status**: Live updates of stream availability and metadata
 
 ### File Storage & Media Handling
-**Hybrid PeerTube + Local file storage**:
+**Local file storage** with plans for cloud integration:
 
-- **PeerTube Integration**: Primary video hosting with OAuth 2.0 authentication
-- **Video Uploads**: PeerTube API upload with local fallback for reliability
-- **Live Streaming**: PeerTube RTMP with OBS Studio integration
-- **Thumbnails**: PeerTube automatic thumbnail generation
-- **Embed System**: PeerTube iframe embed with JavaScript API
-- **File Management**: Automatic cleanup of local files after successful PeerTube upload
+- **Video Uploads**: Local storage with file type validation (MP4, AVI, MOV)
+- **Thumbnails**: Image storage for video previews
+- **File Management**: Organized directory structure with cleanup capabilities
 
 ## External Dependencies
 
@@ -108,14 +97,8 @@ The schema uses UUID primary keys, proper foreign key relationships, and include
 - **PostgreSQL**: Primary database for all application data
 - **Neon Database**: Serverless PostgreSQL hosting with connection pooling
 
-### Video Services
-- **PeerTube**: Self-hosted decentralized video platform for upload and streaming
-- **PeerTube API**: OAuth 2.0 authenticated video management and live streaming
-- **PeerTube Embed**: JavaScript API for embedded video players
-
 ### Authentication Services
-- **Local Authentication**: Email/password with bcrypt hashing
-- **OAuth Providers**: Google, Kakao, Naver social login integration
+- **Replit OIDC**: OpenID Connect authentication provider for user management
 - **Session Storage**: PostgreSQL-backed session management
 
 ### Frontend Libraries

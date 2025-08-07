@@ -15,9 +15,6 @@ import {
 } from "@shared/schema";
 import multer from "multer";
 import path from "path";
-import { initializePeerTube, getPeerTubeClient } from "./peertube";
-import fs from "fs";
-import { peertubeConfig, peertubeCategories, peertubePrivacy } from "./peertube-config";
 
 // Configure multer for file uploads
 const upload = multer({
@@ -38,23 +35,6 @@ const upload = multer({
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
   setupAuth(app);
-
-  // Initialize PeerTube client
-  console.log('🎬 Initializing PeerTube integration...');
-  const peertubeClient = initializePeerTube(peertubeConfig);
-  
-  // Test connection and authenticate
-  try {
-    const isConnected = await peertubeClient.testConnection();
-    if (isConnected) {
-      await peertubeClient.authenticate();
-      console.log('✅ PeerTube integration ready');
-    } else {
-      console.warn('⚠️ PeerTube connection failed - uploads will use local storage');
-    }
-  } catch (error: any) {
-    console.warn('⚠️ PeerTube initialization failed - uploads will use local storage:', error.message);
-  }
 
   // Auth routes are now handled in auth.ts
 
@@ -101,70 +81,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/videos', requireAuth, upload.single('video'), async (req: any, res) => {
     try {
       const userId = req.user.id;
-      
-      if (!req.file) {
-        return res.status(400).json({ message: "No video file provided" });
-      }
-
-      // Try to upload to PeerTube first
-      let videoData: any = {
+      const videoData = insertVideoSchema.parse({
         ...req.body,
         userId,
-        videoUrl: `/uploads/${req.file.filename}`, // fallback to local
-      };
-
-      try {
-        const client = getPeerTubeClient();
-        
-        // Get user's channel (assuming first channel for now)
-        const channels = await client.getChannels();
-        const channelId = channels[0]?.id;
-        
-        if (!channelId) {
-          throw new Error('No PeerTube channel found');
-        }
-
-        // Map category to PeerTube category
-        const category = peertubeCategories[req.body.category as keyof typeof peertubeCategories] || 9; // default to Entertainment
-        
-        // Upload to PeerTube
-        const peertubeVideo = await client.uploadVideo(req.file.path, {
-          channelId,
-          name: req.body.title,
-          description: req.body.description || '',
-          category,
-          privacy: peertubePrivacy.PUBLIC,
-          language: 'ko', // Korean
-          nsfw: false,
-          tags: req.body.category ? [req.body.category] : []
-        });
-
-        // Update video data with PeerTube information
-        videoData = {
-          ...videoData,
-          peertubeId: peertubeVideo.id,
-          peertubeUuid: peertubeVideo.uuid,
-          peertubeEmbedUrl: peertubeVideo.embedUrl,
-          peertubeDownloadUrl: peertubeVideo.downloadUrl,
-          peertubeChannelId: channelId,
-          videoUrl: peertubeVideo.embedUrl, // Use PeerTube embed URL
-          thumbnailUrl: peertubeVideo.thumbnailUrl,
-          duration: peertubeVideo.duration,
-        };
-
-        console.log('✅ Video uploaded to PeerTube:', peertubeVideo.name);
-        
-        // Clean up local file
-        try {
-          fs.unlinkSync(req.file.path);
-        } catch (err: any) {
-          console.warn('Failed to delete local file:', err);
-        }
-        
-      } catch (peertubeError: any) {
-        console.warn('⚠️ PeerTube upload failed, using local storage:', peertubeError.message);
-        // Keep the local file path in videoUrl
-      }
+        videoUrl: req.file ? `/uploads/${req.file.filename}` : null,
+      });
 
       const video = await storage.createVideo(videoData);
       res.status(201).json(video);
@@ -211,59 +132,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/streams', requireAuth, async (req: any, res) => {
     try {
       const userId = req.user.id;
-      
-      // Try to create live stream in PeerTube
-      let streamData: any = {
+      const streamData = insertStreamSchema.parse({
         ...req.body,
         userId,
-      };
-
-      try {
-        const client = getPeerTubeClient();
-        
-        // Get user's channel
-        const channels = await client.getChannels();
-        const channelId = channels[0]?.id;
-        
-        if (!channelId) {
-          throw new Error('No PeerTube channel found');
-        }
-
-        // Map category to PeerTube category
-        const category = peertubeCategories[req.body.category as keyof typeof peertubeCategories] || 9;
-        
-        // Create live stream in PeerTube
-        const peertubeStream = await client.createLiveStream({
-          channelId,
-          name: req.body.title,
-          description: req.body.description || '',
-          category,
-          privacy: peertubePrivacy.PUBLIC,
-          permanentLive: true,
-          saveReplay: true
-        });
-
-        // Update stream data with PeerTube information
-        streamData = {
-          ...streamData,
-          peertubeId: peertubeStream.id,
-          peertubeUuid: peertubeStream.uuid,
-          peertubeEmbedUrl: peertubeStream.embedUrl,
-          rtmpUrl: peertubeStream.rtmpUrl,
-          streamKey: peertubeStream.streamKey,
-          peertubeChannelId: channelId,
-          permanentLive: peertubeStream.permanentLive,
-          saveReplay: peertubeStream.saveReplay
-        };
-
-        console.log('✅ Live stream created in PeerTube:', peertubeStream.name);
-        console.log('📺 RTMP URL:', peertubeStream.rtmpUrl);
-        console.log('🔑 Stream Key:', peertubeStream.streamKey);
-        
-      } catch (peertubeError: any) {
-        console.warn('⚠️ PeerTube stream creation failed:', peertubeError.message);
-        // Continue with local stream creation
-      }
+      });
 
       const stream = await storage.createStream(streamData);
       res.status(201).json(stream);
