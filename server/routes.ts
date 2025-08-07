@@ -201,31 +201,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         } catch (cloudflareError) {
           console.error("Cloudflare API Error:", cloudflareError);
-          // Use YouTube Live alternative for testing
-          const streamKey = `yt_${Math.random().toString(36).substring(2, 15)}`;
+          // Fallback to demo Cloudflare credentials
+          const streamKey = `cf_${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`;
           
           res.json({
             streamId: stream.id,
             streamKey,
-            rtmpUrl: `rtmp://a.rtmp.youtube.com/live2`,
+            rtmpUrl: `rtmps://live.cloudflarestream.com/live/`,
             rtmpStreamKey: streamKey,
             playbackUrl: `/stream/${stream.id}`,
-            note: "Demo mode - use your actual YouTube stream key for testing",
-            cloudflareNote: "Cloudflare Stream service needs to be enabled in your account first",
+            note: "Demo Cloudflare credentials - enable Stream service in your account for production",
+            error: "Cloudflare Stream service not enabled"
           });
         }
       } else {
         // Fallback when no API credentials
-        const streamKey = `demo_${Math.random().toString(36).substring(2, 15)}`;
+        const streamKey = `cf_${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`;
         
         res.json({
           streamId: stream.id,
           streamKey,
-          rtmpUrl: `rtmp://a.rtmp.youtube.com/live2`,
+          rtmpUrl: `rtmps://live.cloudflarestream.com/live/`,
           rtmpStreamKey: streamKey,
           playbackUrl: `/stream/${stream.id}`,
-          note: "Demo mode - use your actual YouTube stream key for testing",
-          setupNote: "Provide CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID for Cloudflare Stream",
+          note: "Demo mode - provide CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID for production streaming",
         });
       }
     } catch (error) {
