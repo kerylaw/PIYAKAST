@@ -201,30 +201,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         } catch (cloudflareError) {
           console.error("Cloudflare API Error:", cloudflareError);
-          // Fallback to demo Cloudflare credentials
-          const streamKey = `cf_${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`;
-          
-          res.json({
-            streamId: stream.id,
-            streamKey,
-            rtmpUrl: `rtmps://live.cloudflarestream.com/live/`,
-            rtmpStreamKey: streamKey,
-            playbackUrl: `/stream/${stream.id}`,
-            note: "Demo Cloudflare credentials - enable Stream service in your account for production",
-            error: "Cloudflare Stream service not enabled"
+          return res.status(400).json({ 
+            message: "Cloudflare Stream service is not enabled",
+            details: "Please enable Cloudflare Stream in your account dashboard to create live streams",
+            error: cloudflareError instanceof Error ? cloudflareError.message : 'Unknown error'
           });
         }
       } else {
-        // Fallback when no API credentials
-        const streamKey = `cf_${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`;
-        
-        res.json({
-          streamId: stream.id,
-          streamKey,
-          rtmpUrl: `rtmps://live.cloudflarestream.com/live/`,
-          rtmpStreamKey: streamKey,
-          playbackUrl: `/stream/${stream.id}`,
-          note: "Demo mode - provide CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID for production streaming",
+        return res.status(400).json({
+          message: "Cloudflare API credentials not configured",
+          details: "Please provide CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID to create live streams"
         });
       }
     } catch (error) {

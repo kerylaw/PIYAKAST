@@ -60,9 +60,20 @@ export default function CloudflareLiveModal({ isOpen, onClose }: CloudflareLiveM
     },
     onError: (error: Error) => {
       console.error('Cloudflare Stream Error:', error);
+      
+      let errorMessage = "Cloudflare Stream 생성에 실패했습니다.";
+      
+      if (error.message.includes("Cloudflare Stream service is not enabled")) {
+        errorMessage = "Cloudflare Stream 서비스가 활성화되지 않았습니다. 계정에서 Stream 서비스를 활성화해주세요.";
+      } else if (error.message.includes("API credentials not configured")) {
+        errorMessage = "Cloudflare API 자격 증명이 설정되지 않았습니다.";
+      } else if (error.message.includes("Authorization Failure")) {
+        errorMessage = "Cloudflare API 권한이 없습니다. API 토큰을 확인해주세요.";
+      }
+      
       toast({
-        title: "Error",
-        description: error.message || "Failed to create Cloudflare stream",
+        title: "스트림 생성 실패",
+        description: errorMessage,
         variant: "destructive",
       });
     },
