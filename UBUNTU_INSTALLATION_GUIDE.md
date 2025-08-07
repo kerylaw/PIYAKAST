@@ -141,15 +141,17 @@ cd /opt/piyakast
 npm install
 ```
 
-## 5. 환경 변수 설정
+## 5. 환경 변수 설정 (개발 환경)
 
-### .env 파일 생성
+> **참고**: 이 섹션은 개발 환경을 위한 설정입니다. 프로덕션 환경은 **"18. 프로덕션 배포"** 섹션을 참조하세요.
+
+### .env 파일 생성 (개발용)
 ```bash
 cp .env.example .env
 nano .env
 ```
 
-### 환경 변수 설정 (.env 파일)
+### 환경 변수 설정 (.env 파일 - 개발용)
 ```bash
 # ===========================================
 # 데이터베이스 설정 (필수)
@@ -501,6 +503,449 @@ sudo systemctl restart nginx postgresql
 - GitHub Issues: https://github.com/your-username/piyakast/issues
 - 문서: https://github.com/your-username/piyakast/wiki
 - 이메일: support@piyakast.com
+
+## 18. 프로덕션 배포
+
+> **중요**: 프로덕션 환경에서는 .env 파일을 사용하지 않고 시스템 레벨에서 환경 변수를 설정합니다.
+
+### 환경 변수 설정 방법
+
+#### 방법 1: systemd 서비스 파일 (권장)
+
+기존 systemd 서비스 파일을 환경 변수를 포함하도록 수정:
+
+```bash
+sudo nano /etc/systemd/system/piyakast.service
+```
+
+**완전한 프로덕션 서비스 파일 예시:**
+```ini
+[Unit]
+Description=PIYAKast - Live Streaming Platform
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+User=piyakast
+Group=piyakast
+WorkingDirectory=/opt/piyakast
+
+# 필수 환경 변수
+Environment=NODE_ENV=production
+Environment=PORT=5000
+Environment=DATABASE_URL=postgresql://piyakast_user:secure_password_here@localhost:5432/piyakast_db
+Environment=SESSION_SECRET=your-super-secure-session-key-32-chars-minimum-production
+
+# OAuth 환경 변수 (선택사항)
+Environment=GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
+Environment=GOOGLE_CLIENT_SECRET=your-google-client-secret
+Environment=KAKAO_CLIENT_ID=your-kakao-client-id
+Environment=NAVER_CLIENT_ID=your-naver-client-id
+Environment=NAVER_CLIENT_SECRET=your-naver-client-secret
+
+# PeerTube 환경 변수 (선택사항)
+Environment=PEERTUBE_URL=http://127.0.0.1:9000
+Environment=PEERTUBE_USERNAME=root
+Environment=PEERTUBE_PASSWORD=your-peertube-secure-password
+
+ExecStart=/usr/bin/npm start
+Restart=always
+RestartSec=10
+
+# 보안 설정
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectHome=yes
+ProtectSystem=strict
+ReadWritePaths=/opt/piyakast/uploads
+
+# 리소스 제한
+LimitNOFILE=65536
+LimitNPROC=4096
+
+[Install]
+WantedBy=multi-user.target
+```
+
+#### 방법 2: 전용 사용자 생성 (보안 권장)
+
+```bash
+# PIYAKast 전용 사용자 생성
+sudo useradd --system --shell /bin/false --home-dir /opt/piyakast piyakast
+
+# 디렉토리 소유권 변경
+sudo chown -R piyakast:piyakast /opt/piyakast
+
+# 업로드 디렉토리 생성
+sudo mkdir -p /opt/piyakast/uploads
+sudo chown piyakast:piyakast /opt/piyakast/uploads
+sudo chmod 755 /opt/piyakast/uploads
+```
+
+#### 방법 3: 환경 파일 분리 (대안)
+
+```bash
+# 프로덕션 환경 파일 생성
+sudo nano /etc/piyakast/production.env
+```
+
+**프로덕션 환경 파일 내용:**
+```bash
+# /etc/piyakast/production.env
+NODE_ENV=production
+PORT=5000
+DATABASE_URL=postgresql://piyakast_user:secure_password@localhost:5432/piyakast_db
+SESSION_SECRET=your-super-secure-session-key-production
+
+# OAuth (선택사항)
+GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+KAKAO_CLIENT_ID=your-kakao-client-id
+NAVER_CLIENT_ID=your-naver-client-id
+NAVER_CLIENT_SECRET=your-naver-client-secret
+
+# PeerTube (선택사항)
+PEERTUBE_URL=http://127.0.0.1:9000
+PEERTUBE_USERNAME=root
+PEERTUBE_PASSWORD=your-peertube-password
+```
+
+**환경 파일을 사용하는 systemd 서비스:**
+```ini
+[Unit]
+Description=PIYAKast - Live Streaming Platform
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+User=piyakast
+Group=piyakast
+WorkingDirectory=/opt/piyakast
+
+# 환경 파일 로드
+EnvironmentFile=/etc/piyakast/production.env
+
+ExecStart=/usr/bin/npm start
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+```
+
+**환경 파일 보안 설정:**
+```bash
+# 환경 파일 권한 설정
+sudo mkdir -p /etc/piyakast
+sudo chmod 700 /etc/piyakast
+sudo chmod 600 /etc/piyakast/production.env
+sudo chown root:piyakast /etc/piyakast/production.env
+```
+
+### 프로덕션 배포 절차
+
+#### 1단계: 프로덕션 빌드
+```bash
+cd /opt/piyakast
+
+# 최신 코드 가져오기
+git pull origin main
+
+# 프로덕션 의존성 설치
+NODE_ENV=production npm ci
+
+# 프로덕션 빌드
+NODE_ENV=production npm run build
+```
+
+#### 2단계: 데이터베이스 마이그레이션
+```bash
+# 데이터베이스 스키마 업데이트
+NODE_ENV=production npm run db:push
+```
+
+#### 3단계: 서비스 재시작
+```bash
+# 서비스 파일 리로드
+sudo systemctl daemon-reload
+
+# 서비스 재시작
+sudo systemctl restart piyakast
+
+# 서비스 상태 확인
+sudo systemctl status piyakast
+```
+
+### 프로덕션 보안 강화
+
+#### 데이터베이스 보안
+```bash
+# PostgreSQL 설정 강화
+sudo nano /etc/postgresql/14/main/postgresql.conf
+
+# 권장 설정:
+# ssl = on
+# log_connections = on
+# log_disconnections = on
+# log_statement = 'mod'
+
+# 방화벽에서 PostgreSQL 포트 제한
+sudo ufw delete allow 5432  # 기존 규칙 삭제
+sudo ufw allow from 127.0.0.1 to any port 5432  # 로컬만 허용
+```
+
+#### SSL/TLS 강화
+```bash
+# 강력한 SSL 설정 (Nginx)
+sudo nano /etc/nginx/sites-available/piyakast
+
+# SSL 설정 추가:
+# ssl_protocols TLSv1.2 TLSv1.3;
+# ssl_ciphers ECDHE-RSA-AES256-GCM-SHA512:DHE-RSA-AES256-GCM-SHA512;
+# ssl_prefer_server_ciphers off;
+# ssl_session_cache shared:SSL:10m;
+# add_header Strict-Transport-Security "max-age=63072000" always;
+```
+
+### 프로덕션 모니터링
+
+#### 로그 관리
+```bash
+# 로그 로테이션 설정
+sudo nano /etc/logrotate.d/piyakast
+
+# 로그 로테이션 설정:
+/var/log/piyakast/*.log {
+    daily
+    missingok
+    rotate 30
+    compress
+    delaycompress
+    notifempty
+    create 644 piyakast piyakast
+    postrotate
+        systemctl reload piyakast
+    endscript
+}
+```
+
+#### 시스템 모니터링
+```bash
+# htop 설치 (시스템 모니터링)
+sudo apt install -y htop
+
+# 네트워크 모니터링
+sudo apt install -y iftop
+
+# 디스크 모니터링
+sudo apt install -y iotop
+```
+
+### 고가용성 (HA) 구성
+
+#### PM2를 이용한 클러스터링
+```bash
+# PM2 글로벌 설치
+sudo npm install -g pm2
+
+# PM2 설정 파일 생성
+sudo nano /opt/piyakast/ecosystem.config.js
+```
+
+**PM2 설정 파일:**
+```javascript
+module.exports = {
+  apps: [{
+    name: 'piyakast',
+    script: 'npm',
+    args: 'start',
+    instances: 'max',
+    exec_mode: 'cluster',
+    env: {
+      NODE_ENV: 'production',
+      PORT: 5000,
+      DATABASE_URL: 'postgresql://piyakast_user:secure_password@localhost:5432/piyakast_db',
+      SESSION_SECRET: 'your-super-secure-session-key-production'
+      // 다른 환경 변수들...
+    },
+    error_file: '/var/log/piyakast/error.log',
+    out_file: '/var/log/piyakast/access.log',
+    log_file: '/var/log/piyakast/combined.log',
+    time: true
+  }]
+};
+```
+
+#### PM2 systemd 서비스
+```bash
+# PM2 startup 설정
+sudo pm2 startup systemd -u piyakast --hp /opt/piyakast
+
+# PM2로 앱 시작
+sudo -u piyakast pm2 start /opt/piyakast/ecosystem.config.js
+
+# 설정 저장
+sudo -u piyakast pm2 save
+```
+
+### 클라우드 배포
+
+#### AWS EC2 배포
+```bash
+# AWS CLI 설치 (선택사항)
+curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+unzip awscliv2.zip
+sudo ./aws/install
+
+# CloudWatch 로그 에이전트 (선택사항)
+sudo apt install -y amazon-cloudwatch-agent
+```
+
+#### Docker 배포 (선택사항)
+```dockerfile
+# Dockerfile
+FROM node:18-alpine
+
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --only=production
+
+COPY . .
+RUN npm run build
+
+EXPOSE 5000
+CMD ["npm", "start"]
+```
+
+**Docker Compose 프로덕션:**
+```yaml
+version: '3.8'
+services:
+  piyakast:
+    build: .
+    ports:
+      - "5000:5000"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://user:pass@postgres:5432/piyakast_db
+      - SESSION_SECRET=${SESSION_SECRET}
+    depends_on:
+      - postgres
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:15
+    environment:
+      - POSTGRES_DB=piyakast_db
+      - POSTGRES_USER=piyakast_user
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+```
+
+### 백업 전략 (프로덕션)
+
+#### 자동화된 백업
+```bash
+# 프로덕션 백업 스크립트
+sudo nano /opt/scripts/backup-production.sh
+```
+
+**프로덕션 백업 스크립트:**
+```bash
+#!/bin/bash
+# 프로덕션 백업 스크립트
+
+BACKUP_DIR="/opt/backups"
+DATE=$(date +%Y%m%d_%H%M%S)
+RETENTION_DAYS=30
+
+# 백업 디렉토리 생성
+mkdir -p $BACKUP_DIR/{database,files,logs}
+
+# 데이터베이스 백업
+pg_dump -h localhost -U piyakast_user piyakast_db | gzip > $BACKUP_DIR/database/piyakast_$DATE.sql.gz
+
+# 업로드 파일 백업
+tar -czf $BACKUP_DIR/files/uploads_$DATE.tar.gz /opt/piyakast/uploads/
+
+# 로그 백업
+tar -czf $BACKUP_DIR/logs/logs_$DATE.tar.gz /var/log/piyakast/
+
+# 오래된 백업 삭제
+find $BACKUP_DIR -name "*.gz" -mtime +$RETENTION_DAYS -delete
+
+# S3 업로드 (선택사항)
+# aws s3 sync $BACKUP_DIR s3://your-backup-bucket/piyakast/
+
+echo "Backup completed: $DATE"
+```
+
+#### Cron 백업 스케줄
+```bash
+# root crontab 편집
+sudo crontab -e
+
+# 매일 새벽 2시 백업, 주간 리포트
+0 2 * * * /opt/scripts/backup-production.sh >> /var/log/backup.log 2>&1
+0 8 * * 1 echo "Weekly backup report" | mail -s "PIYAKast Backup Status" admin@yourcompany.com
+```
+
+### 성능 튜닝 (프로덕션)
+
+#### Node.js 성능 최적화
+```bash
+# .npmrc 설정 (프로덕션)
+echo "production=true" > /opt/piyakast/.npmrc
+echo "registry=https://registry.npmjs.org/" >> /opt/piyakast/.npmrc
+```
+
+#### 시스템 최적화
+```bash
+# 시스템 한계 증가
+sudo nano /etc/security/limits.conf
+
+# 추가할 내용:
+* soft nofile 65536
+* hard nofile 65536
+* soft nproc 4096
+* hard nproc 4096
+
+# 커널 매개변수 최적화
+sudo nano /etc/sysctl.conf
+
+# 추가할 내용:
+net.core.somaxconn = 65535
+net.ipv4.ip_local_port_range = 1024 65535
+net.ipv4.tcp_tw_reuse = 1
+```
+
+### 프로덕션 체크리스트
+
+#### 배포 전 확인사항
+- [ ] 환경 변수 설정 완료
+- [ ] 데이터베이스 연결 테스트
+- [ ] SSL 인증서 설치
+- [ ] 방화벽 규칙 설정
+- [ ] 백업 시스템 구축
+- [ ] 모니터링 설정
+- [ ] 로그 로테이션 설정
+- [ ] 보안 강화 완료
+
+#### 배포 후 확인사항
+- [ ] 서비스 정상 동작
+- [ ] WebSocket 연결 테스트
+- [ ] OAuth 로그인 테스트
+- [ ] 파일 업로드 테스트
+- [ ] 성능 모니터링
+- [ ] 에러 로그 확인
+- [ ] 백업 실행 테스트
+
+---
 
 ## 라이선스
 

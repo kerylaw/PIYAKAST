@@ -8,6 +8,14 @@ The application is built as a full-stack web platform with modern technologies, 
 
 ## Recent Changes (January 2025)
 
+✓ **프로덕션 배포 문서 완성 (2025-08-07)**:
+  - .env 파일을 사용하지 않는 완전한 프로덕션 배포 방법 추가
+  - systemd 환경 변수 설정 및 전용 환경 파일 관리 방법
+  - PM2 클러스터링, 보안 강화, 모니터링 시스템 구축
+  - 고가용성(HA) 구성 및 자동화된 백업 전략
+  - 클라우드 배포(AWS, Docker) 및 성능 튜닝 가이드
+  - 프로덕션 체크리스트 및 배포 후 점검 항목
+
 ✓ **Node.js 호환성 확인 및 문서 업데이트 (2025-08-07)**:
   - Node.js 18.20.8 완전 호환 확인 및 문서화
   - 설치 가이드에 Node.js 18.x와 20.x 모두 지원 명시
