@@ -17,6 +17,13 @@ import {
   membershipBenefits,
   subscriptionSettings,
   memberContent,
+  advertisers,
+  adCampaigns,
+  adCreatives,
+  adPlacements,
+  adAuctionBids,
+  adImpressions,
+  userAdPreferences,
   type User,
   type UpsertUser,
   type Video,
@@ -53,6 +60,20 @@ import {
   type InsertSubscriptionSettings,
   type MemberContent,
   type InsertMemberContent,
+  type Advertiser,
+  type InsertAdvertiser,
+  type AdCampaign,
+  type InsertAdCampaign,
+  type AdCreative,
+  type InsertAdCreative,
+  type AdPlacement,
+  type InsertAdPlacement,
+  type AdAuctionBid,
+  type InsertAdAuctionBid,
+  type AdImpression,
+  type InsertAdImpression,
+  type UserAdPreferences,
+  type InsertUserAdPreferences,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, sql, count } from "drizzle-orm";
@@ -208,6 +229,60 @@ export interface IStorage {
   updateUserAdminStatus(userId: string, action: string, reason?: string): Promise<void>;
   updateVideoAdminStatus(videoId: string, action: string): Promise<void>;
   updateReportAdminStatus(reportId: string, status: string, note?: string): Promise<void>;
+
+  // Advertising system operations
+  // Advertiser operations
+  createAdvertiser(advertiser: InsertAdvertiser): Promise<Advertiser>;
+  getAdvertiser(id: string): Promise<Advertiser | undefined>;
+  getAdvertiserByUserId(userId: string): Promise<Advertiser | undefined>;
+  updateAdvertiser(id: string, updates: Partial<Advertiser>): Promise<Advertiser>;
+  getAdvertisers(): Promise<Advertiser[]>;
+  
+  // Campaign operations
+  createAdCampaign(campaign: InsertAdCampaign): Promise<AdCampaign>;
+  getAdCampaign(id: string): Promise<AdCampaign | undefined>;
+  getAdCampaignsByAdvertiser(advertiserId: string): Promise<AdCampaign[]>;
+  updateAdCampaign(id: string, updates: Partial<AdCampaign>): Promise<AdCampaign>;
+  pauseAdCampaign(id: string): Promise<void>;
+  resumeAdCampaign(id: string): Promise<void>;
+  
+  // Creative operations
+  createAdCreative(creative: InsertAdCreative): Promise<AdCreative>;
+  getAdCreative(id: string): Promise<AdCreative | undefined>;
+  getAdCreativesByCampaign(campaignId: string): Promise<AdCreative[]>;
+  updateAdCreative(id: string, updates: Partial<AdCreative>): Promise<AdCreative>;
+  
+  // Placement operations
+  createAdPlacement(placement: InsertAdPlacement): Promise<AdPlacement>;
+  getAdPlacement(id: string): Promise<AdPlacement | undefined>;
+  getActiveAdPlacements(): Promise<AdPlacement[]>;
+  getAdPlacementsByType(type: string): Promise<AdPlacement[]>;
+  
+  // Real-time auction operations
+  conductAdAuction(placementId: string, userContext: any): Promise<AdAuctionBid[]>;
+  createAdAuctionBid(bid: InsertAdAuctionBid): Promise<AdAuctionBid>;
+  getWinningBid(auctionId: string): Promise<AdAuctionBid | undefined>;
+  
+  // Impression tracking operations
+  createAdImpression(impression: InsertAdImpression): Promise<AdImpression>;
+  trackAdClick(impressionId: string): Promise<void>;
+  trackAdConversion(impressionId: string, conversionType: string, value?: number): Promise<void>;
+  getAdPerformance(campaignId: string, startDate?: Date, endDate?: Date): Promise<any>;
+  
+  // User ad preferences operations
+  createUserAdPreferences(preferences: InsertUserAdPreferences): Promise<UserAdPreferences>;
+  getUserAdPreferences(userId: string): Promise<UserAdPreferences | undefined>;
+  updateUserAdPreferences(userId: string, updates: Partial<UserAdPreferences>): Promise<UserAdPreferences>;
+  
+  // Ad targeting operations
+  getTargetedAds(userId: string, placementType: string, category?: string): Promise<any[]>;
+  calculateAdRelevanceScore(userId: string, campaignId: string): Promise<number>;
+  
+  // Revenue and reporting operations
+  getAdvertiserRevenue(advertiserId: string, startDate?: Date, endDate?: Date): Promise<any>;
+  getCreatorAdRevenue(userId: string, startDate?: Date, endDate?: Date): Promise<any>;
+  getPlatformAdRevenue(startDate?: Date, endDate?: Date): Promise<any>;
+  getAdCampaignMetrics(campaignId: string): Promise<any>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1511,6 +1586,407 @@ export class DatabaseStorage implements IStorage {
     }
 
     await db.update(copyrightReports).set(updateData).where(eq(copyrightReports.id, reportId));
+  }
+
+  // Advertising system operations implementation
+  
+  // Advertiser operations
+  async createAdvertiser(advertiser: InsertAdvertiser): Promise<Advertiser> {
+    const [newAdvertiser] = await db.insert(advertisers).values(advertiser).returning();
+    return newAdvertiser;
+  }
+
+  async getAdvertiser(id: string): Promise<Advertiser | undefined> {
+    const [advertiser] = await db.select().from(advertisers).where(eq(advertisers.id, id));
+    return advertiser;
+  }
+
+  async getAdvertiserByUserId(userId: string): Promise<Advertiser | undefined> {
+    const [advertiser] = await db.select().from(advertisers).where(eq(advertisers.userId, userId));
+    return advertiser;
+  }
+
+  async updateAdvertiser(id: string, updates: Partial<Advertiser>): Promise<Advertiser> {
+    const [updatedAdvertiser] = await db.update(advertisers)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(advertisers.id, id))
+      .returning();
+    return updatedAdvertiser;
+  }
+
+  async getAdvertisers(): Promise<Advertiser[]> {
+    return await db.select().from(advertisers).orderBy(desc(advertisers.createdAt));
+  }
+
+  // Campaign operations
+  async createAdCampaign(campaign: InsertAdCampaign): Promise<AdCampaign> {
+    const [newCampaign] = await db.insert(adCampaigns).values(campaign).returning();
+    return newCampaign;
+  }
+
+  async getAdCampaign(id: string): Promise<AdCampaign | undefined> {
+    const [campaign] = await db.select().from(adCampaigns).where(eq(adCampaigns.id, id));
+    return campaign;
+  }
+
+  async getAdCampaignsByAdvertiser(advertiserId: string): Promise<AdCampaign[]> {
+    return await db.select().from(adCampaigns)
+      .where(eq(adCampaigns.advertiserId, advertiserId))
+      .orderBy(desc(adCampaigns.createdAt));
+  }
+
+  async updateAdCampaign(id: string, updates: Partial<AdCampaign>): Promise<AdCampaign> {
+    const [updatedCampaign] = await db.update(adCampaigns)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(adCampaigns.id, id))
+      .returning();
+    return updatedCampaign;
+  }
+
+  async pauseAdCampaign(id: string): Promise<void> {
+    await db.update(adCampaigns)
+      .set({ status: 'paused', updatedAt: new Date() })
+      .where(eq(adCampaigns.id, id));
+  }
+
+  async resumeAdCampaign(id: string): Promise<void> {
+    await db.update(adCampaigns)
+      .set({ status: 'active', updatedAt: new Date() })
+      .where(eq(adCampaigns.id, id));
+  }
+
+  // Creative operations
+  async createAdCreative(creative: InsertAdCreative): Promise<AdCreative> {
+    const [newCreative] = await db.insert(adCreatives).values(creative).returning();
+    return newCreative;
+  }
+
+  async getAdCreative(id: string): Promise<AdCreative | undefined> {
+    const [creative] = await db.select().from(adCreatives).where(eq(adCreatives.id, id));
+    return creative;
+  }
+
+  async getAdCreativesByCampaign(campaignId: string): Promise<AdCreative[]> {
+    return await db.select().from(adCreatives)
+      .where(eq(adCreatives.campaignId, campaignId))
+      .orderBy(desc(adCreatives.createdAt));
+  }
+
+  async updateAdCreative(id: string, updates: Partial<AdCreative>): Promise<AdCreative> {
+    const [updatedCreative] = await db.update(adCreatives)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(adCreatives.id, id))
+      .returning();
+    return updatedCreative;
+  }
+
+  // Placement operations
+  async createAdPlacement(placement: InsertAdPlacement): Promise<AdPlacement> {
+    const [newPlacement] = await db.insert(adPlacements).values(placement).returning();
+    return newPlacement;
+  }
+
+  async getAdPlacement(id: string): Promise<AdPlacement | undefined> {
+    const [placement] = await db.select().from(adPlacements).where(eq(adPlacements.id, id));
+    return placement;
+  }
+
+  async getActiveAdPlacements(): Promise<AdPlacement[]> {
+    return await db.select().from(adPlacements)
+      .where(eq(adPlacements.isActive, true))
+      .orderBy(adPlacements.priority);
+  }
+
+  async getAdPlacementsByType(type: string): Promise<AdPlacement[]> {
+    return await db.select().from(adPlacements)
+      .where(and(eq(adPlacements.type, type), eq(adPlacements.isActive, true)))
+      .orderBy(adPlacements.priority);
+  }
+
+  // Real-time auction operations (core of the advertising system)
+  async conductAdAuction(placementId: string, userContext: any): Promise<AdAuctionBid[]> {
+    // Get active campaigns that can bid on this placement
+    const activeCampaigns = await db.select({
+      campaign: adCampaigns,
+      creative: adCreatives,
+      advertiser: advertisers
+    })
+    .from(adCampaigns)
+    .innerJoin(adCreatives, eq(adCampaigns.id, adCreatives.campaignId))
+    .innerJoin(advertisers, eq(adCampaigns.advertiserId, advertisers.id))
+    .where(and(
+      eq(adCampaigns.status, 'active'),
+      eq(adCreatives.isActive, true),
+      eq(advertisers.status, 'active')
+    ));
+
+    const bids: AdAuctionBid[] = [];
+    const auctionId = `auction_${Date.now()}_${placementId}`;
+
+    for (const campaign of activeCampaigns) {
+      // Calculate bid amount based on campaign budget and targeting
+      const relevanceScore = await this.calculateAdRelevanceScore(userContext.userId, campaign.campaign.id);
+      const bidAmount = Math.min(
+        campaign.campaign.maxBidAmount,
+        Math.floor(campaign.campaign.maxBidAmount * relevanceScore)
+      );
+
+      if (bidAmount > 0) {
+        const bid = await this.createAdAuctionBid({
+          auctionId,
+          placementId,
+          campaignId: campaign.campaign.id,
+          creativeId: campaign.creative.id,
+          bidAmount,
+          targeting: userContext,
+          qualityScore: relevanceScore * 100,
+        });
+        bids.push(bid);
+      }
+    }
+
+    // Sort bids by bid amount (descending) for auction ranking
+    return bids.sort((a, b) => b.bidAmount - a.bidAmount);
+  }
+
+  async createAdAuctionBid(bid: InsertAdAuctionBid): Promise<AdAuctionBid> {
+    const [newBid] = await db.insert(adAuctionBids).values(bid).returning();
+    return newBid;
+  }
+
+  async getWinningBid(auctionId: string): Promise<AdAuctionBid | undefined> {
+    const [winningBid] = await db.select().from(adAuctionBids)
+      .where(and(eq(adAuctionBids.auctionId, auctionId), eq(adAuctionBids.isWinner, true)));
+    return winningBid;
+  }
+
+  // Impression tracking operations
+  async createAdImpression(impression: InsertAdImpression): Promise<AdImpression> {
+    const [newImpression] = await db.insert(adImpressions).values(impression).returning();
+    return newImpression;
+  }
+
+  async trackAdClick(impressionId: string): Promise<void> {
+    await db.update(adImpressions)
+      .set({ 
+        isClicked: true, 
+        clickedAt: new Date(),
+        updatedAt: new Date()
+      })
+      .where(eq(adImpressions.id, impressionId));
+  }
+
+  async trackAdConversion(impressionId: string, conversionType: string, value?: number): Promise<void> {
+    await db.update(adImpressions)
+      .set({ 
+        isConverted: true,
+        conversionType,
+        conversionValue: value,
+        convertedAt: new Date(),
+        updatedAt: new Date()
+      })
+      .where(eq(adImpressions.id, impressionId));
+  }
+
+  async getAdPerformance(campaignId: string, startDate?: Date, endDate?: Date): Promise<any> {
+    let query = db.select({
+      impressions: count(adImpressions.id),
+      clicks: count(sql`CASE WHEN ${adImpressions.isClicked} THEN 1 END`),
+      conversions: count(sql`CASE WHEN ${adImpressions.isConverted} THEN 1 END`),
+      totalSpend: sql`SUM(${adImpressions.actualCost})`,
+      avgCpc: sql`AVG(CASE WHEN ${adImpressions.isClicked} THEN ${adImpressions.actualCost} END)`,
+      avgCpm: sql`AVG(${adImpressions.actualCost}) * 1000`,
+    })
+    .from(adImpressions)
+    .where(eq(adImpressions.campaignId, campaignId));
+
+    if (startDate) {
+      query = query.where(sql`${adImpressions.createdAt} >= ${startDate}`);
+    }
+    if (endDate) {
+      query = query.where(sql`${adImpressions.createdAt} <= ${endDate}`);
+    }
+
+    const [performance] = await query;
+    return performance;
+  }
+
+  // User ad preferences operations
+  async createUserAdPreferences(preferences: InsertUserAdPreferences): Promise<UserAdPreferences> {
+    const [newPreferences] = await db.insert(userAdPreferences).values(preferences).returning();
+    return newPreferences;
+  }
+
+  async getUserAdPreferences(userId: string): Promise<UserAdPreferences | undefined> {
+    const [preferences] = await db.select().from(userAdPreferences)
+      .where(eq(userAdPreferences.userId, userId));
+    return preferences;
+  }
+
+  async updateUserAdPreferences(userId: string, updates: Partial<UserAdPreferences>): Promise<UserAdPreferences> {
+    const [updatedPreferences] = await db.update(userAdPreferences)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(userAdPreferences.userId, userId))
+      .returning();
+    return updatedPreferences;
+  }
+
+  // Ad targeting operations
+  async getTargetedAds(userId: string, placementType: string, category?: string): Promise<any[]> {
+    // Get user preferences and demographics for targeting
+    const userPrefs = await this.getUserAdPreferences(userId);
+    const user = await this.getUser(userId);
+    
+    // Conduct real-time auction
+    const userContext = {
+      userId,
+      category,
+      placementType,
+      preferences: userPrefs,
+      demographics: user
+    };
+
+    // Get active placements for this type
+    const placements = await this.getAdPlacementsByType(placementType);
+    const targetedAds = [];
+
+    for (const placement of placements) {
+      const bids = await this.conductAdAuction(placement.id, userContext);
+      if (bids.length > 0) {
+        // Winner takes the placement
+        const winningBid = bids[0];
+        await db.update(adAuctionBids)
+          .set({ isWinner: true })
+          .where(eq(adAuctionBids.id, winningBid.id));
+
+        // Create impression record
+        await this.createAdImpression({
+          campaignId: winningBid.campaignId,
+          creativeId: winningBid.creativeId,
+          placementId: placement.id,
+          userId,
+          auctionId: winningBid.auctionId,
+          actualCost: winningBid.bidAmount,
+          targeting: winningBid.targeting
+        });
+
+        targetedAds.push({
+          placement,
+          winningBid,
+          creative: await this.getAdCreative(winningBid.creativeId),
+          campaign: await this.getAdCampaign(winningBid.campaignId)
+        });
+      }
+    }
+
+    return targetedAds;
+  }
+
+  async calculateAdRelevanceScore(userId: string, campaignId: string): Promise<number> {
+    // Get user preferences and campaign targeting
+    const userPrefs = await this.getUserAdPreferences(userId);
+    const campaign = await this.getAdCampaign(campaignId);
+    
+    if (!userPrefs || !campaign) return 0.1; // Low relevance if no data
+
+    let score = 0.5; // Base score
+
+    // Check category interest
+    if (userPrefs.categoryInterests && campaign.targetingOptions) {
+      const campaignCategories = JSON.parse(campaign.targetingOptions as string).categories || [];
+      const userCategories = JSON.parse(userPrefs.categoryInterests as string) || [];
+      
+      const intersection = campaignCategories.filter((cat: string) => userCategories.includes(cat));
+      score += (intersection.length / campaignCategories.length) * 0.3;
+    }
+
+    // Check personalized ad preference
+    if (userPrefs.allowPersonalizedAds) {
+      score += 0.2;
+    }
+
+    // Ensure score is between 0.1 and 1.0
+    return Math.max(0.1, Math.min(1.0, score));
+  }
+
+  // Revenue and reporting operations
+  async getAdvertiserRevenue(advertiserId: string, startDate?: Date, endDate?: Date): Promise<any> {
+    let query = db.select({
+      totalSpend: sql`SUM(${adImpressions.actualCost})`,
+      totalImpressions: count(adImpressions.id),
+      totalClicks: count(sql`CASE WHEN ${adImpressions.isClicked} THEN 1 END`),
+      totalConversions: count(sql`CASE WHEN ${adImpressions.isConverted} THEN 1 END`),
+    })
+    .from(adImpressions)
+    .innerJoin(adCampaigns, eq(adImpressions.campaignId, adCampaigns.id))
+    .where(eq(adCampaigns.advertiserId, advertiserId));
+
+    if (startDate) {
+      query = query.where(sql`${adImpressions.createdAt} >= ${startDate}`);
+    }
+    if (endDate) {
+      query = query.where(sql`${adImpressions.createdAt} <= ${endDate}`);
+    }
+
+    const [revenue] = await query;
+    return revenue;
+  }
+
+  async getCreatorAdRevenue(userId: string, startDate?: Date, endDate?: Date): Promise<any> {
+    // Calculate creator share from ads shown on their content (70% share)
+    let query = db.select({
+      totalRevenue: sql`SUM(${adImpressions.actualCost} * 0.7)`, // 70% to creator
+      totalImpressions: count(adImpressions.id),
+    })
+    .from(adImpressions)
+    .innerJoin(adPlacements, eq(adImpressions.placementId, adPlacements.id))
+    .where(eq(adPlacements.contentCreatorId, userId));
+
+    if (startDate) {
+      query = query.where(sql`${adImpressions.createdAt} >= ${startDate}`);
+    }
+    if (endDate) {
+      query = query.where(sql`${adImpressions.createdAt} <= ${endDate}`);
+    }
+
+    const [revenue] = await query;
+    return revenue;
+  }
+
+  async getPlatformAdRevenue(startDate?: Date, endDate?: Date): Promise<any> {
+    // Calculate platform share from all ads (30% share)
+    let query = db.select({
+      totalRevenue: sql`SUM(${adImpressions.actualCost} * 0.3)`, // 30% to platform
+      totalSpend: sql`SUM(${adImpressions.actualCost})`,
+      totalImpressions: count(adImpressions.id),
+    })
+    .from(adImpressions);
+
+    if (startDate) {
+      query = query.where(sql`${adImpressions.createdAt} >= ${startDate}`);
+    }
+    if (endDate) {
+      query = query.where(sql`${adImpressions.createdAt} <= ${endDate}`);
+    }
+
+    const [revenue] = await query;
+    return revenue;
+  }
+
+  async getAdCampaignMetrics(campaignId: string): Promise<any> {
+    const [metrics] = await db.select({
+      impressions: count(adImpressions.id),
+      clicks: count(sql`CASE WHEN ${adImpressions.isClicked} THEN 1 END`),
+      conversions: count(sql`CASE WHEN ${adImpressions.isConverted} THEN 1 END`),
+      totalSpend: sql`SUM(${adImpressions.actualCost})`,
+      avgCpc: sql`AVG(CASE WHEN ${adImpressions.isClicked} THEN ${adImpressions.actualCost} END)`,
+      ctr: sql`ROUND(COUNT(CASE WHEN ${adImpressions.isClicked} THEN 1 END) * 100.0 / COUNT(${adImpressions.id}), 2)`,
+      conversionRate: sql`ROUND(COUNT(CASE WHEN ${adImpressions.isConverted} THEN 1 END) * 100.0 / COUNT(${adImpressions.id}), 2)`,
+    })
+    .from(adImpressions)
+    .where(eq(adImpressions.campaignId, campaignId));
+
+    return metrics;
   }
 }
 

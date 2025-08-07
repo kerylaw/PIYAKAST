@@ -656,6 +656,299 @@ export type SubscriptionSettings = typeof subscriptionSettings.$inferSelect;
 export type InsertMemberContent = z.infer<typeof insertMemberContentSchema>;
 export type MemberContent = typeof memberContent.$inferSelect;
 
+// ========== ADVERTISING SYSTEM ==========
+
+// Advertisers table - 광고주 관리
+export const advertisers = pgTable("advertisers", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyName: varchar("company_name").notNull(),
+  industry: varchar("industry"),
+  contactEmail: varchar("contact_email").notNull(),
+  contactPerson: varchar("contact_person"),
+  website: varchar("website"),
+  // 광고주 인증 및 상태
+  isVerified: boolean("is_verified").default(false),
+  isActive: boolean("is_active").default(true),
+  accountBalance: integer("account_balance").default(0), // in KRW
+  totalSpent: integer("total_spent").default(0),
+  // 타겟팅 제한사항
+  allowedCategories: text("allowed_categories").array(), // 허용된 카테고리들
+  blockedKeywords: text("blocked_keywords").array(),
+  // 메타데이터
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("IDX_advertisers_industry").on(table.industry),
+  index("IDX_advertisers_verified").on(table.isVerified),
+  index("IDX_advertisers_active").on(table.isActive),
+  index("IDX_advertisers_balance").on(table.accountBalance),
+  check("CHK_advertisers_balance", sql`${table.accountBalance} >= 0`),
+  check("CHK_advertisers_spent", sql`${table.totalSpent} >= 0`),
+]);
+
+// Ad campaigns table - 광고 캠페인
+export const adCampaigns = pgTable("ad_campaigns", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  advertiserId: varchar("advertiser_id").notNull().references(() => advertisers.id),
+  name: varchar("name").notNull(),
+  description: text("description"),
+  
+  // 캠페인 목표 및 타입
+  objective: varchar("objective").notNull(), // 'brand_awareness', 'traffic', 'conversions', 'video_views'
+  campaignType: varchar("campaign_type").notNull(), // 'display', 'video', 'overlay', 'sponsored_content'
+  
+  // 예산 및 입찰
+  dailyBudget: integer("daily_budget").notNull(),
+  totalBudget: integer("total_budget"),
+  bidStrategy: varchar("bid_strategy").default("cpm"), // 'cpm', 'cpc', 'cpa', 'viewable_cpm'
+  maxBid: integer("max_bid").notNull(), // 최대 입찰가
+  
+  // 타겟팅 설정
+  targetAudience: jsonb("target_audience"), // 나이, 성별, 지역, 관심사 등
+  targetCategories: text("target_categories").array(),
+  targetKeywords: text("target_keywords").array(),
+  excludeKeywords: text("exclude_keywords").array(),
+  
+  // 스케줄링
+  startDate: timestamp("start_date").notNull(),
+  endDate: timestamp("end_date"),
+  timeSlots: jsonb("time_slots"), // 시간대별 노출 설정
+  
+  // 상태 및 성과
+  status: varchar("status").default("draft"), // 'draft', 'active', 'paused', 'completed', 'cancelled'
+  isActive: boolean("is_active").default(false),
+  totalSpent: integer("total_spent").default(0),
+  totalImpressions: integer("total_impressions").default(0),
+  totalClicks: integer("total_clicks").default(0),
+  totalViews: integer("total_views").default(0),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("IDX_ad_campaigns_advertiser").on(table.advertiserId),
+  index("IDX_ad_campaigns_objective").on(table.objective),
+  index("IDX_ad_campaigns_type").on(table.campaignType),
+  index("IDX_ad_campaigns_status").on(table.status),
+  index("IDX_ad_campaigns_active").on(table.isActive),
+  index("IDX_ad_campaigns_dates").on(table.startDate, table.endDate),
+  index("IDX_ad_campaigns_budget").on(table.dailyBudget),
+  check("CHK_ad_campaigns_objective", sql`${table.objective} IN ('brand_awareness', 'traffic', 'conversions', 'video_views')`),
+  check("CHK_ad_campaigns_type", sql`${table.campaignType} IN ('display', 'video', 'overlay', 'sponsored_content')`),
+  check("CHK_ad_campaigns_bid_strategy", sql`${table.bidStrategy} IN ('cpm', 'cpc', 'cpa', 'viewable_cpm')`),
+  check("CHK_ad_campaigns_status", sql`${table.status} IN ('draft', 'active', 'paused', 'completed', 'cancelled')`),
+  check("CHK_ad_campaigns_budget", sql`${table.dailyBudget} >= 1000 AND ${table.maxBid} >= 100`),
+]);
+
+// Ad creatives table - 광고 소재
+export const adCreatives = pgTable("ad_creatives", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  campaignId: varchar("campaign_id").notNull().references(() => adCampaigns.id),
+  name: varchar("name").notNull(),
+  
+  // 광고 소재 타입 및 내용
+  creativeType: varchar("creative_type").notNull(), // 'image', 'video', 'text', 'rich_media'
+  title: varchar("title"),
+  description: text("description"),
+  imageUrl: varchar("image_url"),
+  videoUrl: varchar("video_url"),
+  thumbnailUrl: varchar("thumbnail_url"),
+  
+  // 행동 유도 (CTA)
+  ctaText: varchar("cta_text"),
+  ctaUrl: varchar("cta_url"),
+  
+  // 크기 및 포맷
+  dimensions: jsonb("dimensions"), // {width, height}
+  aspectRatio: varchar("aspect_ratio"),
+  fileSize: integer("file_size"),
+  duration: integer("duration"), // 비디오 길이 (초)
+  
+  // 상태 및 승인
+  status: varchar("status").default("pending"), // 'pending', 'approved', 'rejected', 'active', 'paused'
+  isActive: boolean("is_active").default(false),
+  moderationNotes: text("moderation_notes"),
+  
+  // 성과 추적
+  impressions: integer("impressions").default(0),
+  clicks: integer("clicks").default(0),
+  views: integer("views").default(0),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("IDX_ad_creatives_campaign").on(table.campaignId),
+  index("IDX_ad_creatives_type").on(table.creativeType),
+  index("IDX_ad_creatives_status").on(table.status),
+  index("IDX_ad_creatives_active").on(table.isActive),
+  check("CHK_ad_creatives_type", sql`${table.creativeType} IN ('image', 'video', 'text', 'rich_media')`),
+  check("CHK_ad_creatives_status", sql`${table.status} IN ('pending', 'approved', 'rejected', 'active', 'paused')`),
+]);
+
+// Ad placements table - 광고 지면
+export const adPlacements = pgTable("ad_placements", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(),
+  description: text("description"),
+  
+  // 지면 위치 및 타입
+  placementType: varchar("placement_type").notNull(), // 'pre_roll', 'mid_roll', 'post_roll', 'banner', 'overlay', 'sidebar'
+  position: varchar("position"), // 'top', 'bottom', 'left', 'right', 'center'
+  
+  // 지면별 설정
+  pageTypes: text("page_types").array(), // ['home', 'video', 'live', 'profile']
+  categories: text("categories").array(),
+  
+  // 크기 및 제약
+  dimensions: jsonb("dimensions"),
+  maxDuration: integer("max_duration"), // 최대 광고 길이 (초)
+  
+  // 가격 설정
+  floorPrice: integer("floor_price").notNull(), // 최소 입찰가
+  
+  // 상태
+  isActive: boolean("is_active").default(true),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("IDX_ad_placements_type").on(table.placementType),
+  index("IDX_ad_placements_position").on(table.position),
+  index("IDX_ad_placements_active").on(table.isActive),
+  index("IDX_ad_placements_floor_price").on(table.floorPrice),
+  check("CHK_ad_placements_type", sql`${table.placementType} IN ('pre_roll', 'mid_roll', 'post_roll', 'banner', 'overlay', 'sidebar')`),
+  check("CHK_ad_placements_floor_price", sql`${table.floorPrice} >= 50`),
+]);
+
+// Ad auction bids table - 실시간 경매 입찰
+export const adAuctionBids = pgTable("ad_auction_bids", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  auctionId: varchar("auction_id").notNull(), // 경매 세션 ID
+  campaignId: varchar("campaign_id").notNull().references(() => adCampaigns.id),
+  creativeId: varchar("creative_id").notNull().references(() => adCreatives.id),
+  placementId: varchar("placement_id").notNull().references(() => adPlacements.id),
+  
+  // 입찰 정보
+  bidAmount: integer("bid_amount").notNull(),
+  bidStrategy: varchar("bid_strategy").notNull(),
+  
+  // 타겟팅 점수
+  targetingScore: integer("targeting_score").default(0), // 0-100
+  qualityScore: integer("quality_score").default(0), // 0-100
+  
+  // 경매 결과
+  isWinning: boolean("is_winning").default(false),
+  finalPrice: integer("final_price"),
+  
+  // 컨텍스트 정보
+  userSegment: varchar("user_segment"),
+  contentCategory: varchar("content_category"),
+  pageType: varchar("page_type"),
+  deviceType: varchar("device_type"),
+  
+  // 타이밍
+  bidTimestamp: timestamp("bid_timestamp").defaultNow(),
+  auctionDuration: integer("auction_duration"), // 밀리초
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("IDX_ad_auction_bids_auction").on(table.auctionId),
+  index("IDX_ad_auction_bids_campaign").on(table.campaignId),
+  index("IDX_ad_auction_bids_placement").on(table.placementId),
+  index("IDX_ad_auction_bids_winning").on(table.isWinning),
+  index("IDX_ad_auction_bids_timestamp").on(table.bidTimestamp),
+  index("IDX_ad_auction_bids_user_segment").on(table.userSegment),
+  check("CHK_ad_auction_bids_bid_amount", sql`${table.bidAmount} >= 50`),
+  check("CHK_ad_auction_bids_scores", sql`${table.targetingScore} >= 0 AND ${table.targetingScore} <= 100 AND ${table.qualityScore} >= 0 AND ${table.qualityScore} <= 100`),
+]);
+
+// Ad impressions table - 광고 노출 추적
+export const adImpressions = pgTable("ad_impressions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  auctionId: varchar("auction_id").notNull(),
+  campaignId: varchar("campaign_id").notNull().references(() => adCampaigns.id),
+  creativeId: varchar("creative_id").notNull().references(() => adCreatives.id),
+  placementId: varchar("placement_id").notNull().references(() => adPlacements.id),
+  
+  // 수익 정보
+  cost: integer("cost").notNull(), // 광고주가 지불한 금액
+  revenue: integer("revenue").notNull(), // 플랫폼 수익
+  creatorRevenue: integer("creator_revenue").notNull(), // 크리에이터 수익
+  
+  // 컨텍스트 정보
+  userId: varchar("user_id").references(() => users.id),
+  videoId: varchar("video_id").references(() => videos.id),
+  streamId: varchar("stream_id").references(() => streams.id),
+  
+  // 사용자 세그먼트 (익명화된 정보)
+  userSegment: varchar("user_segment"),
+  ageGroup: varchar("age_group"),
+  location: varchar("location"), // 시/도 레벨
+  deviceType: varchar("device_type"),
+  browserType: varchar("browser_type"),
+  
+  // 노출 세부 정보
+  impressionType: varchar("impression_type").notNull(), // 'view', 'skip', 'complete'
+  viewDuration: integer("view_duration").default(0), // 실제 시청 시간 (초)
+  isViewable: boolean("is_viewable").default(false), // 뷰어빌리티
+  
+  // 상호작용
+  isClicked: boolean("is_clicked").default(false),
+  clickTimestamp: timestamp("click_timestamp"),
+  
+  // IP 주소 해시 (중복 방지용)
+  ipHash: varchar("ip_hash"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("IDX_ad_impressions_auction").on(table.auctionId),
+  index("IDX_ad_impressions_campaign").on(table.campaignId),
+  index("IDX_ad_impressions_creative").on(table.creativeId),
+  index("IDX_ad_impressions_placement").on(table.placementId),
+  index("IDX_ad_impressions_user").on(table.userId),
+  index("IDX_ad_impressions_video").on(table.videoId),
+  index("IDX_ad_impressions_stream").on(table.streamId),
+  index("IDX_ad_impressions_type").on(table.impressionType),
+  index("IDX_ad_impressions_clicked").on(table.isClicked),
+  index("IDX_ad_impressions_created_at").on(table.createdAt),
+  index("IDX_ad_impressions_user_segment").on(table.userSegment),
+  index("IDX_ad_impressions_ip_hash").on(table.ipHash),
+  check("CHK_ad_impressions_type", sql`${table.impressionType} IN ('view', 'skip', 'complete')`),
+  check("CHK_ad_impressions_cost", sql`${table.cost} >= 0 AND ${table.revenue} >= 0 AND ${table.creatorRevenue} >= 0`),
+  check("CHK_ad_impressions_view_duration", sql`${table.viewDuration} >= 0`),
+]);
+
+// User ad preferences table - 사용자 광고 선호도
+export const userAdPreferences = pgTable("user_ad_preferences", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  
+  // 광고 설정
+  allowPersonalizedAds: boolean("allow_personalized_ads").default(true),
+  maxAdsPerSession: integer("max_ads_per_session").default(5),
+  
+  // 선호 광고 타입
+  preferredAdTypes: text("preferred_ad_types").array(),
+  blockedCategories: text("blocked_categories").array(),
+  blockedAdvertisers: text("blocked_advertisers").array(),
+  
+  // 관심 카테고리 (타겟팅용)
+  interests: text("interests").array(),
+  recentCategories: text("recent_categories").array(),
+  
+  // 행동 패턴 (익명화된 정보)
+  avgSessionDuration: integer("avg_session_duration").default(0),
+  primaryWatchTime: varchar("primary_watch_time"), // 주요 시청 시간대
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("IDX_user_ad_preferences_user").on(table.userId),
+  index("IDX_user_ad_preferences_personalized").on(table.allowPersonalizedAds),
+  unique("UQ_user_ad_preferences_user").on(table.userId),
+  check("CHK_user_ad_preferences_max_ads", sql`${table.maxAdsPerSession} >= 0 AND ${table.maxAdsPerSession} <= 20`),
+]);
+
 // Playlists table for content management
 export const playlists = pgTable("playlists", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

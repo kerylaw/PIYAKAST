@@ -1690,13 +1690,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Check if already subscribed
-      const existingSubscription = await storage.getSubscription(userId, channelId);
+      const existingSubscription = await storage.getSubscription(userId!, channelId);
       if (existingSubscription) {
         return res.status(400).json({ message: 'Already subscribed' });
       }
       
       const subscription = await storage.createSubscription({
-        userId,
+        userId: userId!,
         channelId,
         type: 'follow',
       });
@@ -1718,7 +1718,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { channelId } = req.params;
       const userId = req.user?.id;
       
-      await storage.cancelSubscription(userId, channelId);
+      await storage.cancelSubscription(userId!, channelId);
       res.status(204).send();
     } catch (error) {
       console.error('Error unsubscribing from channel:', error);
@@ -1732,7 +1732,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { channelId } = req.params;
       const userId = req.user?.id;
       
-      const membership = await storage.getUserMembership(userId, channelId);
+      const membership = await storage.getUserMembership(userId!, channelId);
       res.json(membership || { subscription: null, tier: null, channel: null });
     } catch (error) {
       console.error('Error fetching user membership:', error);
@@ -1748,7 +1748,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user?.id;
       
       // Check if user has access to member content
-      const membership = await storage.getUserMembership(userId, channelId);
+      const membership = await storage.getUserMembership(userId!, channelId);
       if (!membership || !membership.subscription?.isActive) {
         return res.status(403).json({ message: 'Membership required' });
       }
@@ -1805,6 +1805,464 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error fetching channel revenue:', error);
       res.status(500).json({ message: 'Failed to fetch revenue' });
+    }
+  });
+
+  // ==================================================
+  // ADVERTISING SYSTEM API ENDPOINTS (Real-time Auction System)
+  // ==================================================
+
+  // Advertiser Management Endpoints
+  app.post('/api/advertisers', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      
+      // Check if user already has an advertiser account
+      const existingAdvertiser = await storage.getAdvertiserByUserId(userId);
+      if (existingAdvertiser) {
+        return res.status(400).json({ message: 'Advertiser account already exists' });
+      }
+
+      const advertiser = await storage.createAdvertiser({
+        userId,
+        companyName: req.body.companyName,
+        industry: req.body.industry,
+        website: req.body.website,
+        contactEmail: req.body.contactEmail,
+        contactPhone: req.body.contactPhone,
+        country: req.body.country || 'KR',
+        status: 'pending' // Requires approval
+      });
+
+      res.status(201).json(advertiser);
+    } catch (error) {
+      console.error('Error creating advertiser:', error);
+      res.status(500).json({ message: 'Failed to create advertiser account' });
+    }
+  });
+
+  app.get('/api/advertisers/me', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const advertiser = await storage.getAdvertiserByUserId(userId);
+      
+      if (!advertiser) {
+        return res.status(404).json({ message: 'Advertiser account not found' });
+      }
+
+      res.json(advertiser);
+    } catch (error) {
+      console.error('Error fetching advertiser:', error);
+      res.status(500).json({ message: 'Failed to fetch advertiser' });
+    }
+  });
+
+  // Campaign Management Endpoints
+  app.post('/api/ad-campaigns', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const advertiser = await storage.getAdvertiserByUserId(userId);
+      
+      if (!advertiser || advertiser.status !== 'active') {
+        return res.status(403).json({ message: 'Active advertiser account required' });
+      }
+
+      const campaign = await storage.createAdCampaign({
+        advertiserId: advertiser.id,
+        name: req.body.name,
+        description: req.body.description,
+        campaignType: req.body.campaignType || 'display',
+        status: 'draft',
+        budget: parseInt(req.body.budget),
+        dailyBudget: parseInt(req.body.dailyBudget),
+        maxBidAmount: parseInt(req.body.maxBidAmount),
+        targetingOptions: JSON.stringify(req.body.targeting || {}),
+        startDate: req.body.startDate ? new Date(req.body.startDate) : new Date(),
+        endDate: req.body.endDate ? new Date(req.body.endDate) : undefined
+      });
+
+      res.status(201).json(campaign);
+    } catch (error) {
+      console.error('Error creating campaign:', error);
+      res.status(500).json({ message: 'Failed to create campaign' });
+    }
+  });
+
+  app.get('/api/ad-campaigns', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const advertiser = await storage.getAdvertiserByUserId(userId);
+      
+      if (!advertiser) {
+        return res.status(403).json({ message: 'Advertiser account required' });
+      }
+
+      const campaigns = await storage.getAdCampaignsByAdvertiser(advertiser.id);
+      res.json(campaigns);
+    } catch (error) {
+      console.error('Error fetching campaigns:', error);
+      res.status(500).json({ message: 'Failed to fetch campaigns' });
+    }
+  });
+
+  app.get('/api/ad-campaigns/:id', requireAuth, async (req: any, res) => {
+    try {
+      const campaign = await storage.getAdCampaign(req.params.id);
+      if (!campaign) {
+        return res.status(404).json({ message: 'Campaign not found' });
+      }
+
+      // Check ownership
+      const userId = req.user.id;
+      const advertiser = await storage.getAdvertiserByUserId(userId);
+      if (!advertiser || campaign.advertiserId !== advertiser.id) {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      res.json(campaign);
+    } catch (error) {
+      console.error('Error fetching campaign:', error);
+      res.status(500).json({ message: 'Failed to fetch campaign' });
+    }
+  });
+
+  app.patch('/api/ad-campaigns/:id', requireAuth, async (req: any, res) => {
+    try {
+      const campaignId = req.params.id;
+      const campaign = await storage.getAdCampaign(campaignId);
+      
+      if (!campaign) {
+        return res.status(404).json({ message: 'Campaign not found' });
+      }
+
+      // Check ownership
+      const userId = req.user.id;
+      const advertiser = await storage.getAdvertiserByUserId(userId);
+      if (!advertiser || campaign.advertiserId !== advertiser.id) {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const updatedCampaign = await storage.updateAdCampaign(campaignId, req.body);
+      res.json(updatedCampaign);
+    } catch (error) {
+      console.error('Error updating campaign:', error);
+      res.status(500).json({ message: 'Failed to update campaign' });
+    }
+  });
+
+  app.post('/api/ad-campaigns/:id/pause', requireAuth, async (req: any, res) => {
+    try {
+      const campaignId = req.params.id;
+      const campaign = await storage.getAdCampaign(campaignId);
+      
+      if (!campaign) {
+        return res.status(404).json({ message: 'Campaign not found' });
+      }
+
+      // Check ownership
+      const userId = req.user.id;
+      const advertiser = await storage.getAdvertiserByUserId(userId);
+      if (!advertiser || campaign.advertiserId !== advertiser.id) {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      await storage.pauseAdCampaign(campaignId);
+      res.json({ message: 'Campaign paused successfully' });
+    } catch (error) {
+      console.error('Error pausing campaign:', error);
+      res.status(500).json({ message: 'Failed to pause campaign' });
+    }
+  });
+
+  app.post('/api/ad-campaigns/:id/resume', requireAuth, async (req: any, res) => {
+    try {
+      const campaignId = req.params.id;
+      const campaign = await storage.getAdCampaign(campaignId);
+      
+      if (!campaign) {
+        return res.status(404).json({ message: 'Campaign not found' });
+      }
+
+      // Check ownership
+      const userId = req.user.id;
+      const advertiser = await storage.getAdvertiserByUserId(userId);
+      if (!advertiser || campaign.advertiserId !== advertiser.id) {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      await storage.resumeAdCampaign(campaignId);
+      res.json({ message: 'Campaign resumed successfully' });
+    } catch (error) {
+      console.error('Error resuming campaign:', error);
+      res.status(500).json({ message: 'Failed to resume campaign' });
+    }
+  });
+
+  // Creative Management Endpoints
+  app.post('/api/ad-creatives', requireAuth, async (req: any, res) => {
+    try {
+      const campaignId = req.body.campaignId;
+      const campaign = await storage.getAdCampaign(campaignId);
+      
+      if (!campaign) {
+        return res.status(404).json({ message: 'Campaign not found' });
+      }
+
+      // Check ownership
+      const userId = req.user.id;
+      const advertiser = await storage.getAdvertiserByUserId(userId);
+      if (!advertiser || campaign.advertiserId !== advertiser.id) {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const creative = await storage.createAdCreative({
+        campaignId,
+        name: req.body.name,
+        type: req.body.type, // banner, video, native, text
+        format: req.body.format, // 300x250, 728x90, etc.
+        content: JSON.stringify(req.body.content),
+        imageUrl: req.body.imageUrl,
+        videoUrl: req.body.videoUrl,
+        headline: req.body.headline,
+        description: req.body.description,
+        callToAction: req.body.callToAction,
+        landingUrl: req.body.landingUrl,
+        isActive: true
+      });
+
+      res.status(201).json(creative);
+    } catch (error) {
+      console.error('Error creating creative:', error);
+      res.status(500).json({ message: 'Failed to create creative' });
+    }
+  });
+
+  app.get('/api/ad-campaigns/:campaignId/creatives', requireAuth, async (req: any, res) => {
+    try {
+      const { campaignId } = req.params;
+      const campaign = await storage.getAdCampaign(campaignId);
+      
+      if (!campaign) {
+        return res.status(404).json({ message: 'Campaign not found' });
+      }
+
+      // Check ownership
+      const userId = req.user.id;
+      const advertiser = await storage.getAdvertiserByUserId(userId);
+      if (!advertiser || campaign.advertiserId !== advertiser.id) {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const creatives = await storage.getAdCreativesByCampaign(campaignId);
+      res.json(creatives);
+    } catch (error) {
+      console.error('Error fetching creatives:', error);
+      res.status(500).json({ message: 'Failed to fetch creatives' });
+    }
+  });
+
+  // Real-time Ad Serving API (Core SSP functionality)
+  app.post('/api/ads/request', async (req, res) => {
+    try {
+      const { placementType, category, userId } = req.body;
+      
+      if (!placementType) {
+        return res.status(400).json({ message: 'Placement type required' });
+      }
+
+      // Get targeted ads through real-time auction
+      const targetedAds = await storage.getTargetedAds(
+        userId || 'anonymous',
+        placementType,
+        category
+      );
+
+      res.json({
+        ads: targetedAds,
+        timestamp: new Date().toISOString(),
+        auctionDurationMs: Date.now() % 10 + 1 // Simulate auction time (1-10ms)
+      });
+    } catch (error) {
+      console.error('Error serving ads:', error);
+      res.status(500).json({ message: 'Failed to serve ads' });
+    }
+  });
+
+  // Ad Interaction Tracking
+  app.post('/api/ads/impression/:impressionId/click', async (req, res) => {
+    try {
+      const { impressionId } = req.params;
+      await storage.trackAdClick(impressionId);
+      res.json({ message: 'Click tracked successfully' });
+    } catch (error) {
+      console.error('Error tracking click:', error);
+      res.status(500).json({ message: 'Failed to track click' });
+    }
+  });
+
+  app.post('/api/ads/impression/:impressionId/conversion', async (req, res) => {
+    try {
+      const { impressionId } = req.params;
+      const { conversionType, value } = req.body;
+      
+      await storage.trackAdConversion(impressionId, conversionType, value);
+      res.json({ message: 'Conversion tracked successfully' });
+    } catch (error) {
+      console.error('Error tracking conversion:', error);
+      res.status(500).json({ message: 'Failed to track conversion' });
+    }
+  });
+
+  // Analytics and Reporting
+  app.get('/api/ad-campaigns/:id/performance', requireAuth, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const { startDate, endDate } = req.query;
+      
+      const campaign = await storage.getAdCampaign(id);
+      if (!campaign) {
+        return res.status(404).json({ message: 'Campaign not found' });
+      }
+
+      // Check ownership
+      const userId = req.user.id;
+      const advertiser = await storage.getAdvertiserByUserId(userId);
+      if (!advertiser || campaign.advertiserId !== advertiser.id) {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const performance = await storage.getAdPerformance(
+        id,
+        startDate ? new Date(startDate as string) : undefined,
+        endDate ? new Date(endDate as string) : undefined
+      );
+
+      const metrics = await storage.getAdCampaignMetrics(id);
+
+      res.json({
+        performance,
+        metrics,
+        campaign: {
+          id: campaign.id,
+          name: campaign.name,
+          status: campaign.status
+        }
+      });
+    } catch (error) {
+      console.error('Error fetching campaign performance:', error);
+      res.status(500).json({ message: 'Failed to fetch performance data' });
+    }
+  });
+
+  // Creator Ad Revenue Endpoints
+  app.get('/api/creators/ad-revenue', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const { startDate, endDate } = req.query;
+      
+      const revenue = await storage.getCreatorAdRevenue(
+        userId,
+        startDate ? new Date(startDate as string) : undefined,
+        endDate ? new Date(endDate as string) : undefined
+      );
+
+      res.json({
+        totalRevenue: revenue?.totalRevenue || 0,
+        totalImpressions: revenue?.totalImpressions || 0,
+        currency: 'KRW',
+        sharePercentage: 70, // 70% to creator, 30% to platform
+        period: {
+          startDate: startDate || 'all-time',
+          endDate: endDate || 'now'
+        }
+      });
+    } catch (error) {
+      console.error('Error fetching creator ad revenue:', error);
+      res.status(500).json({ message: 'Failed to fetch ad revenue' });
+    }
+  });
+
+  // User Ad Preferences
+  app.get('/api/users/ad-preferences', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const preferences = await storage.getUserAdPreferences(userId);
+      
+      if (!preferences) {
+        // Create default preferences
+        const defaultPreferences = await storage.createUserAdPreferences({
+          userId,
+          allowPersonalizedAds: true,
+          allowDataCollection: true,
+          adFrequencyPreference: 'normal',
+          categoryInterests: JSON.stringify([]),
+          blockedAdvertisers: JSON.stringify([])
+        });
+        return res.json(defaultPreferences);
+      }
+
+      res.json(preferences);
+    } catch (error) {
+      console.error('Error fetching ad preferences:', error);
+      res.status(500).json({ message: 'Failed to fetch ad preferences' });
+    }
+  });
+
+  app.patch('/api/users/ad-preferences', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const updatedPreferences = await storage.updateUserAdPreferences(userId, req.body);
+      res.json(updatedPreferences);
+    } catch (error) {
+      console.error('Error updating ad preferences:', error);
+      res.status(500).json({ message: 'Failed to update ad preferences' });
+    }
+  });
+
+  // Admin Ad System Management
+  app.get('/api/admin/ads/revenue', requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const { startDate, endDate } = req.query;
+      
+      const platformRevenue = await storage.getPlatformAdRevenue(
+        startDate ? new Date(startDate as string) : undefined,
+        endDate ? new Date(endDate as string) : undefined
+      );
+
+      res.json({
+        platformRevenue: platformRevenue?.totalRevenue || 0,
+        totalSpend: platformRevenue?.totalSpend || 0,
+        totalImpressions: platformRevenue?.totalImpressions || 0,
+        platformShare: 30, // 30% platform share
+        creatorShare: 70,  // 70% creator share
+        currency: 'KRW'
+      });
+    } catch (error) {
+      console.error('Error fetching platform ad revenue:', error);
+      res.status(500).json({ message: 'Failed to fetch platform revenue' });
+    }
+  });
+
+  app.get('/api/admin/advertisers', requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const advertisers = await storage.getAdvertisers();
+      res.json(advertisers);
+    } catch (error) {
+      console.error('Error fetching advertisers:', error);
+      res.status(500).json({ message: 'Failed to fetch advertisers' });
+    }
+  });
+
+  app.patch('/api/admin/advertisers/:id/status', requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+      
+      const updatedAdvertiser = await storage.updateAdvertiser(id, { status });
+      res.json(updatedAdvertiser);
+    } catch (error) {
+      console.error('Error updating advertiser status:', error);
+      res.status(500).json({ message: 'Failed to update advertiser status' });
     }
   });
 
