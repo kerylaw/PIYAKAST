@@ -71,7 +71,7 @@ export default function Sidebar({ className, onClose }: SidebarProps) {
 
         {/* Main Navigation */}
         <div>
-          <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
+          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
             Browse
           </h3>
           <ul className="space-y-2">
@@ -87,7 +87,7 @@ export default function Sidebar({ className, onClose }: SidebarProps) {
                       "flex items-center px-3 py-2 rounded-lg transition-colors",
                       isActive 
                         ? "bg-primary-purple text-white" 
-                        : "hover:bg-card-bg text-gray-300 hover:text-white"
+                        : "hover:bg-muted text-foreground"
                     )}
                     data-testid={`link-${item.label.toLowerCase().replace(' ', '-')}`}
                   >
@@ -105,7 +105,7 @@ export default function Sidebar({ className, onClose }: SidebarProps) {
 
         {/* Categories */}
         <div>
-          <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
+          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
             Categories
           </h3>
           <ul className="space-y-2">
@@ -121,7 +121,7 @@ export default function Sidebar({ className, onClose }: SidebarProps) {
                       "flex items-center px-3 py-2 rounded-lg transition-colors",
                       isActive 
                         ? "bg-primary-purple text-white" 
-                        : "hover:bg-card-bg text-gray-300 hover:text-white"
+                        : "hover:bg-muted text-foreground"
                     )}
                     data-testid={`link-category-${item.label.toLowerCase()}`}
                   >
@@ -137,7 +137,7 @@ export default function Sidebar({ className, onClose }: SidebarProps) {
         {/* Following */}
         {isAuthenticated && Array.isArray(following) && following.length > 0 && (
           <div>
-            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
               Following
             </h3>
             <div className="space-y-3">
@@ -145,7 +145,7 @@ export default function Sidebar({ className, onClose }: SidebarProps) {
                 <Link
                   key={channel.id}
                   href={`/profile/${channel.username}`}
-                  className="flex items-center space-x-3 px-3 py-2 hover:bg-card-bg rounded-lg cursor-pointer transition-colors"
+                  className="flex items-center space-x-3 px-3 py-2 hover:bg-muted rounded-lg cursor-pointer transition-colors"
                   data-testid={`link-channel-${channel.username}`}
                 >
                   <Avatar className="w-8 h-8">
@@ -154,7 +154,7 @@ export default function Sidebar({ className, onClose }: SidebarProps) {
                   </Avatar>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{channel.username}</p>
-                    <p className="text-xs text-gray-400">Offline</p>
+                    <p className="text-xs text-muted-foreground">Offline</p>
                   </div>
                   {/* Online indicator would be dynamic based on stream status */}
                   {Math.random() > 0.7 && (
