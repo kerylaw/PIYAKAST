@@ -81,8 +81,8 @@ export default function Category() {
     return (
       <Layout>
         <div className="container mx-auto px-6 py-8 text-center">
-          <h1 className="text-2xl font-bold text-white mb-4">Category Not Found</h1>
-          <p className="text-gray-400">The category "{category}" doesn't exist.</p>
+          <h1 className="text-2xl font-bold text-foreground mb-4">Category Not Found</h1>
+          <p className="text-muted-foreground">The category "{category}" doesn't exist.</p>
         </div>
       </Layout>
     );
@@ -95,46 +95,46 @@ export default function Category() {
       <div className="container mx-auto px-6 py-8 max-w-7xl">
         {/* Header */}
         <div className="flex items-center space-x-4 mb-8">
-          <div className={`p-3 rounded-full bg-gray-800 ${config.color}`}>
+          <div className={`p-3 rounded-full bg-gray-800 dark:bg-gray-700 ${config.color}`}>
             <IconComponent className="h-8 w-8" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold text-white">{config.name}</h1>
-            <p className="text-gray-400 mt-1">{config.description}</p>
+            <h1 className="text-3xl font-bold text-foreground">{config.name}</h1>
+            <p className="text-muted-foreground mt-1">{config.description}</p>
           </div>
         </div>
 
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          <div className="bg-dark-blue rounded-lg p-4 border border-gray-700">
+          <div className="bg-card rounded-lg p-4 border border-border hover:border-primary/50 transition-colors">
             <div className="flex items-center space-x-2">
               <Play className="h-5 w-5 text-primary-purple" />
-              <span className="text-sm text-gray-400">Videos</span>
+              <span className="text-sm font-medium text-foreground">Videos</span>
             </div>
-            <p className="text-2xl font-bold text-white mt-1">{categoryVideos.length}</p>
+            <p className="text-2xl font-bold text-foreground mt-1">{categoryVideos.length}</p>
           </div>
-          <div className="bg-dark-blue rounded-lg p-4 border border-gray-700">
+          <div className="bg-card rounded-lg p-4 border border-border hover:border-red-500/50 transition-colors">
             <div className="flex items-center space-x-2">
               <Radio className="h-5 w-5 text-red-500" />
-              <span className="text-sm text-gray-400">Live</span>
+              <span className="text-sm font-medium text-foreground">Live</span>
             </div>
-            <p className="text-2xl font-bold text-white mt-1">{categoryStreams.length}</p>
+            <p className="text-2xl font-bold text-foreground mt-1">{categoryStreams.length}</p>
           </div>
-          <div className="bg-dark-blue rounded-lg p-4 border border-gray-700">
+          <div className="bg-card rounded-lg p-4 border border-border hover:border-blue-500/50 transition-colors">
             <div className="flex items-center space-x-2">
               <Eye className="h-5 w-5 text-blue-500" />
-              <span className="text-sm text-gray-400">Total Views</span>
+              <span className="text-sm font-medium text-foreground">Total Views</span>
             </div>
-            <p className="text-2xl font-bold text-white mt-1">
+            <p className="text-2xl font-bold text-foreground mt-1">
               {categoryVideos.reduce((sum: number, video: any) => sum + (video.viewCount || 0), 0)}
             </p>
           </div>
-          <div className="bg-dark-blue rounded-lg p-4 border border-gray-700">
+          <div className="bg-card rounded-lg p-4 border border-border hover:border-green-500/50 transition-colors">
             <div className="flex items-center space-x-2">
               <Users className="h-5 w-5 text-green-500" />
-              <span className="text-sm text-gray-400">Viewers</span>
+              <span className="text-sm font-medium text-foreground">Viewers</span>
             </div>
-            <p className="text-2xl font-bold text-white mt-1">
+            <p className="text-2xl font-bold text-foreground mt-1">
               {categoryStreams.reduce((sum: number, stream: any) => sum + (stream.viewerCount || 0), 0)}
             </p>
           </div>
@@ -142,11 +142,11 @@ export default function Category() {
 
         {/* Content Tabs */}
         <Tabs defaultValue="videos" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 bg-dark-blue">
-            <TabsTrigger value="videos" data-testid="tab-videos">
+          <TabsList className="grid w-full grid-cols-2 bg-card">
+            <TabsTrigger value="videos" data-testid="tab-videos" className="font-medium">
               Videos ({categoryVideos.length})
             </TabsTrigger>
-            <TabsTrigger value="live" data-testid="tab-live">
+            <TabsTrigger value="live" data-testid="tab-live" className="font-medium">
               Live ({categoryStreams.length})
             </TabsTrigger>
           </TabsList>
@@ -166,11 +166,11 @@ export default function Category() {
               </div>
             ) : categoryVideos.length === 0 ? (
               <div className="text-center py-12">
-                <IconComponent className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold text-gray-400 mb-2">
+                <IconComponent className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-xl font-semibold text-foreground mb-2">
                   No {config.name.toLowerCase()} videos yet
                 </h3>
-                <p className="text-gray-500">
+                <p className="text-muted-foreground">
                   Be the first to upload {config.name.toLowerCase()} content!
                 </p>
               </div>
@@ -183,8 +183,8 @@ export default function Category() {
                     className="group"
                     data-testid={`link-video-${video.id}`}
                   >
-                    <div className="bg-dark-blue rounded-lg overflow-hidden border border-gray-700 hover:border-primary-purple transition-colors">
-                      <div className="relative aspect-video bg-gray-800">
+                    <div className="bg-card rounded-lg overflow-hidden border border-border hover:border-primary transition-colors">
+                      <div className="relative aspect-video bg-muted">
                         {video.thumbnailUrl ? (
                           <img 
                             src={video.thumbnailUrl} 
@@ -193,18 +193,18 @@ export default function Category() {
                           />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center">
-                            <Play className="h-12 w-12 text-gray-400" />
+                            <Play className="h-12 w-12 text-muted-foreground" />
                           </div>
                         )}
                         <div className="absolute top-2 left-2">
-                          <Badge className={`text-xs ${config.color} bg-gray-900`}>
+                          <Badge className={`text-xs ${config.color} bg-background/90 backdrop-blur-sm`}>
                             <Hash className="h-3 w-3 mr-1" />
                             {config.name}
                           </Badge>
                         </div>
                       </div>
                       <div className="p-4">
-                        <h3 className="font-semibold text-white group-hover:text-primary-purple transition-colors mb-2 line-clamp-2">
+                        <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors mb-2 line-clamp-2">
                           {video.title}
                         </h3>
                         <div className="flex items-center space-x-2 mb-2">
@@ -217,11 +217,11 @@ export default function Category() {
                               {(video.user?.username || 'U')[0].toUpperCase()}
                             </AvatarFallback>
                           </Avatar>
-                          <span className="text-sm text-gray-400 truncate">
+                          <span className="text-sm text-muted-foreground truncate">
                             {video.user?.username}
                           </span>
                         </div>
-                        <div className="flex items-center justify-between text-xs text-gray-500">
+                        <div className="flex items-center justify-between text-xs text-muted-foreground">
                           <div className="flex items-center space-x-1">
                             <Eye className="h-3 w-3" />
                             <span>{video.viewCount || 0} views</span>
@@ -256,11 +256,11 @@ export default function Category() {
               </div>
             ) : categoryStreams.length === 0 ? (
               <div className="text-center py-12">
-                <Radio className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold text-gray-400 mb-2">
+                <Radio className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-xl font-semibold text-foreground mb-2">
                   No live {config.name.toLowerCase()} streams
                 </h3>
-                <p className="text-gray-500">
+                <p className="text-muted-foreground">
                   No one is streaming {config.name.toLowerCase()} content right now.
                 </p>
               </div>
@@ -273,8 +273,8 @@ export default function Category() {
                     className="group"
                     data-testid={`link-stream-${stream.id}`}
                   >
-                    <div className="bg-dark-blue rounded-lg overflow-hidden border border-gray-700 hover:border-red-500 transition-colors">
-                      <div className="relative aspect-video bg-gray-800">
+                    <div className="bg-card rounded-lg overflow-hidden border border-border hover:border-red-500 transition-colors">
+                      <div className="relative aspect-video bg-muted">
                         {stream.thumbnailUrl ? (
                           <img 
                             src={stream.thumbnailUrl} 
@@ -283,7 +283,7 @@ export default function Category() {
                           />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center">
-                            <Radio className="h-12 w-12 text-gray-400" />
+                            <Radio className="h-12 w-12 text-muted-foreground" />
                           </div>
                         )}
                         <div className="absolute top-2 left-2">
@@ -298,7 +298,7 @@ export default function Category() {
                         </div>
                       </div>
                       <div className="p-4">
-                        <h3 className="font-semibold text-white group-hover:text-red-500 transition-colors mb-2 line-clamp-2">
+                        <h3 className="font-semibold text-foreground group-hover:text-red-500 transition-colors mb-2 line-clamp-2">
                           {stream.title}
                         </h3>
                         <div className="flex items-center space-x-2 mb-2">
@@ -311,11 +311,11 @@ export default function Category() {
                               {(stream.user?.username || 'U')[0].toUpperCase()}
                             </AvatarFallback>
                           </Avatar>
-                          <span className="text-sm text-gray-400 truncate">
+                          <span className="text-sm text-muted-foreground truncate">
                             {stream.user?.username}
                           </span>
                         </div>
-                        <div className="flex items-center justify-between text-xs text-gray-500">
+                        <div className="flex items-center justify-between text-xs text-muted-foreground">
                           <div className="flex items-center space-x-1">
                             <Users className="h-3 w-3" />
                             <span>{stream.viewerCount || 0} viewers</span>
