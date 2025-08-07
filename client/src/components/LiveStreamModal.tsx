@@ -60,11 +60,11 @@ export default function LiveStreamModal({ isOpen, onClose }: LiveStreamModalProp
       }
       
       toast({
-        title: "스트림 생성 완료!",
-        description: "라이브 스트림 페이지로 이동합니다.",
+        title: "스트림 준비 완료!",
+        description: "스트림 설정 페이지로 이동합니다. 준비가 되면 '방송 시작' 버튼을 눌러주세요.",
       });
       
-      // 스트림 생성 후 바로 라이브 스트림 뷰어 페이지로 이동
+      // 스트림 생성 후 바로 라이브 스트림 뷰어 페이지로 이동 (아직 다른 사용자에게는 안 보임)
       setTimeout(() => {
         window.location.href = `/stream/${stream.id}`;
       }, 1000);

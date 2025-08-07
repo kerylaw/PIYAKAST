@@ -205,6 +205,7 @@ export class DatabaseStorage implements IStorage {
         description: streams.description,
         category: streams.category,
         isLive: streams.isLive,
+        isPublic: streams.isPublic,
         viewerCount: streams.viewerCount,
         startedAt: streams.startedAt,
         endedAt: streams.endedAt,
@@ -219,7 +220,7 @@ export class DatabaseStorage implements IStorage {
       })
       .from(streams)
       .leftJoin(users, eq(streams.userId, users.id))
-      .where(eq(streams.isLive, true))
+      .where(and(eq(streams.isLive, true), eq(streams.isPublic, true)))
       .orderBy(desc(streams.viewerCount));
   }
 
@@ -230,8 +231,10 @@ export class DatabaseStorage implements IStorage {
     }
     if (isLive) {
       updateData.startedAt = new Date();
+      updateData.isPublic = true; // 방송 시작 시 다른 사용자들에게 보이도록 설정
     } else {
       updateData.endedAt = new Date();
+      updateData.isPublic = false; // 방송 종료 시 숨김
     }
 
     await db.update(streams).set(updateData).where(eq(streams.id, id));

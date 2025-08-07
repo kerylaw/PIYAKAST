@@ -81,6 +81,7 @@ export const streams = pgTable("streams", {
   saveReplay: boolean("save_replay").default(true),
   // Original fields
   isLive: boolean("is_live").default(false),
+  isPublic: boolean("is_public").default(false), // 방송 시작 전까지는 다른 사용자에게 보이지 않음
   viewerCount: integer("viewer_count").default(0),
   startedAt: timestamp("started_at"),
   endedAt: timestamp("ended_at"),
