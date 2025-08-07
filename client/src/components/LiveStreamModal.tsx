@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Video, VideoOff, Mic, MicOff, Square, Settings } from "lucide-react";
+import { Video, VideoOff, Mic, MicOff, Square, Settings, Copy, ExternalLink } from "lucide-react";
 // Removed Agora SDK - using PeerTube RTMP streaming instead
 
 interface LiveStreamModalProps {
@@ -35,16 +35,33 @@ export default function LiveStreamModal({ isOpen, onClose }: LiveStreamModalProp
   const [isVideoEnabled, setIsVideoEnabled] = useState(true);
   const [isAudioEnabled, setIsAudioEnabled] = useState(true);
   const [viewerCount, setViewerCount] = useState(0);
+  const [rtmpUrl, setRtmpUrl] = useState("");
+  const [streamKey, setStreamKey] = useState("");
+  const [showSetup, setShowSetup] = useState(false);
   
   const videoRef = useRef<HTMLDivElement>(null);
   const streamId = useRef<string>("");
 
   const createStreamMutation = useMutation({
     mutationFn: async (data: { title: string; description: string; category: string }) => {
-      return await apiRequest("/api/streams", "POST", data);
+      const response = await apiRequest("POST", "/api/streams", data);
+      return await response.json();
     },
     onSuccess: (stream: any) => {
+      console.log('PeerTube Stream Created:', stream);
       streamId.current = stream.id;
+      
+      // Store RTMP connection details if available
+      if (stream.rtmpUrl && stream.streamKey) {
+        setRtmpUrl(stream.rtmpUrl);
+        setStreamKey(stream.streamKey);
+        setShowSetup(true);
+        toast({
+          title: "스트림 생성 완료!",
+          description: `OBS Studio 설정 정보를 확인하세요.`,
+        });
+      }
+      
       startLiveStream(stream.id);
       queryClient.invalidateQueries({ queryKey: ["/api/streams"] });
     },
@@ -287,8 +304,61 @@ export default function LiveStreamModal({ isOpen, onClose }: LiveStreamModalProp
               </div>
             )}
 
+            {/* RTMP Setup - Only show when stream is created */}
+            {showSetup && rtmpUrl && streamKey && (
+              <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
+                <h4 className="font-semibold mb-3 text-yellow-800 dark:text-yellow-200">
+                  🎥 OBS Studio 설정 정보
+                </h4>
+                <div className="space-y-3 text-sm">
+                  <div>
+                    <label className="block font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Server URL:
+                    </label>
+                    <div className="flex items-center space-x-2">
+                      <Input
+                        value={rtmpUrl}
+                        readOnly
+                        className="font-mono text-xs"
+                      />
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => navigator.clipboard.writeText(rtmpUrl)}
+                      >
+                        <Copy className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Stream Key:
+                    </label>
+                    <div className="flex items-center space-x-2">
+                      <Input
+                        value={streamKey}
+                        readOnly
+                        type="password"
+                        className="font-mono text-xs"
+                      />
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => navigator.clipboard.writeText(streamKey)}
+                      >
+                        <Copy className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">
+                    OBS Studio에서 위 정보를 사용하여 스트리밍을 시작하세요.
+                  </p>
+                </div>
+              </div>
+            )}
+
             {/* Instructions */}
-            {!isLive && (
+            {!isLive && !showSetup && (
               <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
                 <h4 className="font-semibold mb-2 text-blue-800 dark:text-blue-200">
                   <Settings className="w-4 h-4 inline mr-2" />

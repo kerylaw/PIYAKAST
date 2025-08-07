@@ -310,7 +310,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Create Cloudflare stream
+  // Create Cloudflare stream (BACKUP - NOT USED)
   app.post('/api/streams/cloudflare', requireAuth, async (req: any, res) => {
     try {
       console.log('🎥 Creating Cloudflare stream...', req.body);
@@ -386,8 +386,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       } else {
         return res.status(400).json({
-          message: "Cloudflare API credentials not configured",
-          details: "Please provide CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID to create live streams"
+          message: "Cloudflare Stream is disabled - Use PeerTube streaming instead",
+          details: "This platform now uses PeerTube for decentralized live streaming. Please use the main stream creation endpoint."
         });
       }
     } catch (error) {
