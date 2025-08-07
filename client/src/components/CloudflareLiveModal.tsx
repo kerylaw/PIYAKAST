@@ -39,11 +39,26 @@ export default function CloudflareLiveModal({ isOpen, onClose }: CloudflareLiveM
 
   const createCloudflareStreamMutation = useMutation({
     mutationFn: async (data: { title: string; description: string; category: string }) => {
-      return await apiRequest("/api/streams/cloudflare", "POST", data);
+      const response = await fetch("/api/streams/cloudflare", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ message: "Unknown error" }));
+        throw new Error(`${response.status}: ${error.message || "Request failed"}`);
+      }
+
+      return response.json();
     },
     onSuccess: (response: any) => {
+      console.log('Cloudflare Stream Created:', response);
       setStreamId(response.streamId);
-      setStreamKey(response.streamKey);
+      setStreamKey(response.rtmpStreamKey || response.streamKey);
       setRtmpUrl(response.rtmpUrl);
       setIsLive(true);
       queryClient.invalidateQueries({ queryKey: ["/api/streams"] });
@@ -53,13 +68,14 @@ export default function CloudflareLiveModal({ isOpen, onClose }: CloudflareLiveM
       
       toast({
         title: "Live Stream Created!",
-        description: "Your stream is ready. Use the RTMP details in your streaming software.",
+        description: response.note || "Your stream is ready. Use the RTMP details in your streaming software.",
       });
     },
-    onError: () => {
+    onError: (error: Error) => {
+      console.error('Cloudflare Stream Error:', error);
       toast({
         title: "Error",
-        description: "Failed to create Cloudflare stream",
+        description: error.message || "Failed to create Cloudflare stream",
         variant: "destructive",
       });
     },

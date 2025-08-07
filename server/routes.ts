@@ -144,6 +144,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create Cloudflare stream
   app.post('/api/streams/cloudflare', isAuthenticated, async (req: any, res) => {
     try {
+      console.log('🎥 Creating Cloudflare stream...', req.body);
       const userId = req.user.claims.sub;
       const { title, description, category } = req.body;
       
@@ -155,6 +156,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       const stream = await storage.createStream(streamData);
+      console.log('✅ Database stream created:', stream.id);
 
       // Create actual Cloudflare Live Input
       if (process.env.CLOUDFLARE_API_TOKEN && process.env.CLOUDFLARE_ACCOUNT_ID) {
