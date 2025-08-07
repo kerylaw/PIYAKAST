@@ -1,6 +1,6 @@
-# StreamHub - 빠른 시작 가이드
+# PIYAKast - 빠른 시작 가이드
 
-## 5분 만에 StreamHub 실행하기
+## 5분 만에 PIYAKast 실행하기
 
 ### 전제 조건
 - Ubuntu 20.04+ 또는 유사한 Linux 배포판
@@ -10,8 +10,8 @@
 
 ### 1. 프로젝트 클론
 ```bash
-git clone https://github.com/your-username/streamhub.git
-cd streamhub
+git clone https://github.com/your-username/piyakast.git
+cd piyakast
 ```
 
 ### 2. 환경 설정
@@ -26,12 +26,12 @@ nano .env
 ### 3. 데이터베이스 설정
 ```bash
 # PostgreSQL 사용자 및 데이터베이스 생성
-sudo -u postgres createuser streamhub_user --createdb --login
-sudo -u postgres createdb streamhub_db --owner=streamhub_user
-sudo -u postgres psql -c "ALTER USER streamhub_user PASSWORD 'your_password';"
+sudo -u postgres createuser piyakast_user --createdb --login
+sudo -u postgres createdb piyakast_db --owner=piyakast_user
+sudo -u postgres psql -c "ALTER USER piyakast_user PASSWORD 'your_password';"
 
 # .env 파일에 데이터베이스 URL 설정
-DATABASE_URL="postgresql://streamhub_user:your_password@localhost:5432/streamhub_db"
+DATABASE_URL="postgresql://piyakast_user:your_password@localhost:5432/piyakast_db"
 ```
 
 ### 4. 애플리케이션 실행

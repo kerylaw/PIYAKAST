@@ -1,10 +1,10 @@
 import { PeerTubeConfig } from './peertube';
 
-// PeerTube configuration - 여러 URL 시도
+// PeerTube configuration - 환경변수 우선 사용
 export const peertubeConfig: PeerTubeConfig = {
-  url: process.env.PEERTUBE_URL || 'http://127.0.0.1:9000', // 환경변수 우선
-  username: 'root', // Admin username from config
-  password: 'Yoyeom75!'
+  url: process.env.PEERTUBE_URL || 'http://127.0.0.1:9000',
+  username: process.env.PEERTUBE_USERNAME || 'root',
+  password: process.env.PEERTUBE_PASSWORD || 'default-password'
 };
 
 // PeerTube categories mapping

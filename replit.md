@@ -1,8 +1,8 @@
-# StreamHub - Live Streaming and VOD Platform
+# PIYAKast - Live Streaming and VOD Platform
 
 ## Overview
 
-StreamHub is a comprehensive video streaming platform that combines live streaming capabilities with Video on Demand (VOD) features, similar to Twitch and YouTube. The platform enables content creators to broadcast live streams, upload videos, and build communities through real-time chat interactions. Users can discover content, follow creators, engage through comments and likes, and participate in live chat sessions.
+PIYAKast is a comprehensive video streaming platform that combines live streaming capabilities with Video on Demand (VOD) features, similar to Twitch and YouTube. The platform enables content creators to broadcast live streams, upload videos, and build communities through real-time chat interactions. Users can discover content, follow creators, engage through comments and likes, and participate in live chat sessions.
 
 The application is built as a full-stack web platform with modern technologies, focusing on real-time interactions, scalable video delivery, and user engagement features including authentication, content management, and social interactions.
 

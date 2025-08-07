@@ -1,8 +1,8 @@
-# StreamHub - Ubuntu Installation Guide
+# PIYAKast - Ubuntu Installation Guide
 
 ## 시스템 개요
 
-StreamHub는 한국 콘텐츠에 특화된 라이브 스트리밍 및 VOD 플랫폼입니다. Twitch와 YouTube의 기능을 결합하여 실시간 방송, 동영상 업로드, 댓글 시스템, 슈퍼챗, 소셜 인증 등을 제공합니다.
+PIYAKast는 한국 콘텐츠에 특화된 라이브 스트리밍 및 VOD 플랫폼입니다. Twitch와 YouTube의 기능을 결합하여 실시간 방송, 동영상 업로드, 댓글 시스템, 슈퍼챗, 소셜 인증 등을 제공합니다.
 
 ### 주요 기술 스택
 - **프론트엔드**: React 18 + TypeScript + Tailwind CSS
@@ -92,12 +92,12 @@ sudo systemctl enable postgresql
 sudo -u postgres psql
 
 -- PostgreSQL 콘솔에서 실행:
-CREATE USER streamhub_user WITH PASSWORD 'your_secure_password';
-CREATE DATABASE streamhub_db OWNER streamhub_user;
-GRANT ALL PRIVILEGES ON DATABASE streamhub_db TO streamhub_user;
+CREATE USER piyakast_user WITH PASSWORD 'your_secure_password';
+CREATE DATABASE piyakast_db OWNER piyakast_user;
+GRANT ALL PRIVILEGES ON DATABASE piyakast_db TO piyakast_user;
 
 -- 확장 기능 활성화 (UUID 생성용)
-\c streamhub_db
+\c piyakast_db
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
@@ -128,12 +128,12 @@ sudo systemctl restart postgresql
 ### 저장소 클론
 ```bash
 cd /opt
-sudo git clone https://github.com/your-username/streamhub.git
-cd streamhub
+sudo git clone https://github.com/your-username/piyakast.git
+cd piyakast
 
 # 소유권 변경 (선택사항)
-sudo chown -R $USER:$USER /opt/streamhub
-cd /opt/streamhub
+sudo chown -R $USER:$USER /opt/piyakast
+cd /opt/piyakast
 ```
 
 ### 의존성 설치
@@ -151,37 +151,38 @@ nano .env
 
 ### 환경 변수 설정 (.env 파일)
 ```bash
-# 데이터베이스 연결
-DATABASE_URL="postgresql://streamhub_user:your_secure_password@localhost:5432/streamhub_db"
+# ===========================================
+# 데이터베이스 설정 (필수)
+# ===========================================
+DATABASE_URL="postgresql://piyakast_user:your_secure_password@localhost:5432/piyakast_db"
 
-# PostgreSQL 개별 설정
-PGHOST=localhost
-PGPORT=5432
-PGUSER=streamhub_user
-PGPASSWORD=your_secure_password
-PGDATABASE=streamhub_db
-
-# 세션 보안
-SESSION_SECRET="your-super-secret-session-key-change-this-in-production"
-
-# OAuth 설정 (선택사항)
-GOOGLE_CLIENT_ID=your_google_client_id
-GOOGLE_CLIENT_SECRET=your_google_client_secret
-
-KAKAO_CLIENT_ID=your_kakao_rest_api_key
-KAKAO_CLIENT_SECRET=your_kakao_client_secret
-
-NAVER_CLIENT_ID=your_naver_client_id
-NAVER_CLIENT_SECRET=your_naver_client_secret
-
-# PeerTube 설정 (선택사항)
-PEERTUBE_URL=http://localhost:9000
-PEERTUBE_USERNAME=your_peertube_username
-PEERTUBE_PASSWORD=your_peertube_password
-
+# ===========================================
 # 서버 설정
-NODE_ENV=production
+# ===========================================
 PORT=5000
+NODE_ENV=production
+SESSION_SECRET="your-super-secret-session-key-32-chars-minimum"
+
+# ===========================================
+# 소셜 로그인 설정 (선택사항)
+# ===========================================
+# Google OAuth 2.0
+GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+
+# Kakao OAuth 2.0  
+KAKAO_CLIENT_ID=your-kakao-client-id
+
+# Naver OAuth 2.0
+NAVER_CLIENT_ID=your-naver-client-id
+NAVER_CLIENT_SECRET=your-naver-client-secret
+
+# ===========================================
+# PeerTube 설정 (선택사항)
+# ===========================================
+PEERTUBE_URL=http://127.0.0.1:9000
+PEERTUBE_USERNAME=root
+PEERTUBE_PASSWORD=your-peertube-password
 ```
 
 ## 6. 데이터베이스 스키마 생성
@@ -194,7 +195,7 @@ npm run db:push
 ### 연결 테스트
 ```bash
 # PostgreSQL 연결 테스트
-psql -h localhost -U streamhub_user -d streamhub_db -c "SELECT version();"
+psql -h localhost -U piyakast_user -d piyakast_db -c "SELECT version();"
 ```
 
 ## 7. OAuth 인증 설정 (선택사항)
@@ -220,7 +221,7 @@ psql -h localhost -U streamhub_user -d streamhub_db -c "SELECT version();"
 
 ## 8. PeerTube 설정 (선택사항)
 
-StreamHub는 PeerTube와 통합하여 분산형 동영상 호스팅을 지원합니다.
+PIYAKast는 PeerTube와 통합하여 분산형 동영상 호스팅을 지원합니다.
 
 ### PeerTube 설치
 ```bash
@@ -257,21 +258,21 @@ npm start
 
 ### systemd 서비스 파일 생성
 ```bash
-sudo nano /etc/systemd/system/streamhub.service
+sudo nano /etc/systemd/system/piyakast.service
 ```
 
 ### 서비스 파일 내용
 ```ini
 [Unit]
-Description=StreamHub - Live Streaming Platform
+Description=PIYAKast - Live Streaming Platform
 After=network.target postgresql.service
 
 [Service]
 Type=simple
 User=your_username
-WorkingDirectory=/opt/streamhub
+WorkingDirectory=/opt/piyakast
 Environment=NODE_ENV=production
-ExecStart=/usr/bin/node dist/index.js
+ExecStart=/usr/bin/npm start
 Restart=always
 RestartSec=10
 
@@ -282,11 +283,11 @@ WantedBy=multi-user.target
 ### 서비스 등록 및 시작
 ```bash
 sudo systemctl daemon-reload
-sudo systemctl enable streamhub
-sudo systemctl start streamhub
+sudo systemctl enable piyakast
+sudo systemctl start piyakast
 
 # 상태 확인
-sudo systemctl status streamhub
+sudo systemctl status piyakast
 ```
 
 ## 11. Nginx 웹 서버 설정 (선택사항)
@@ -298,7 +299,7 @@ sudo apt install -y nginx
 
 ### 설정 파일 생성
 ```bash
-sudo nano /etc/nginx/sites-available/streamhub
+sudo nano /etc/nginx/sites-available/piyakast
 ```
 
 ### Nginx 설정 내용
@@ -333,7 +334,7 @@ server {
 
     # 정적 파일 캐싱
     location /assets {
-        alias /opt/streamhub/dist/assets;
+        alias /opt/piyakast/dist/assets;
         expires 1y;
         add_header Cache-Control public;
     }
@@ -342,7 +343,7 @@ server {
 
 ### Nginx 설정 활성화
 ```bash
-sudo ln -s /etc/nginx/sites-available/streamhub /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/piyakast /etc/nginx/sites-enabled/
 sudo nginx -t
 sudo systemctl restart nginx
 ```
@@ -375,8 +376,8 @@ sudo ufw allow 5432      # PostgreSQL (필요시)
 
 ### 로그 확인
 ```bash
-# StreamHub 애플리케이션 로그
-sudo journalctl -u streamhub -f
+# PIYAKast 애플리케이션 로그
+sudo journalctl -u piyakast -f
 
 # Nginx 로그
 sudo tail -f /var/log/nginx/access.log
@@ -408,7 +409,7 @@ BACKUP_DIR="/opt/backups"
 DATE=$(date +%Y%m%d_%H%M%S)
 
 mkdir -p $BACKUP_DIR
-pg_dump -h localhost -U streamhub_user streamhub_db > $BACKUP_DIR/streamhub_backup_$DATE.sql
+pg_dump -h localhost -U piyakast_user piyakast_db > $BACKUP_DIR/piyakast_backup_$DATE.sql
 ```
 
 ### 자동 백업 설정 (crontab)
@@ -416,7 +417,7 @@ pg_dump -h localhost -U streamhub_user streamhub_db > $BACKUP_DIR/streamhub_back
 crontab -e
 
 # 매일 새벽 2시에 백업 실행
-0 2 * * * /opt/streamhub/backup.sh
+0 2 * * * /opt/piyakast/backup.sh
 ```
 
 ## 16. 트러블슈팅
@@ -429,7 +430,7 @@ crontab -e
 sudo systemctl status postgresql
 
 # 연결 테스트
-psql -h localhost -U streamhub_user -d streamhub_db
+psql -h localhost -U piyakast_user -d piyakast_db
 ```
 
 **2. Node.js 애플리케이션 시작 실패**
@@ -439,7 +440,7 @@ rm -rf node_modules package-lock.json
 npm install
 
 # 권한 확인
-ls -la /opt/streamhub
+ls -la /opt/piyakast
 ```
 
 **3. WebSocket 연결 문제**
@@ -473,7 +474,7 @@ maintenance_work_mem = 512MB
 - PM2 사용 권장
 ```bash
 npm install -g pm2
-pm2 start dist/index.js --name streamhub -i max
+pm2 start "npm start" --name piyakast -i max
 pm2 startup
 pm2 save
 ```
@@ -482,11 +483,11 @@ pm2 save
 
 ### 애플리케이션 업데이트
 ```bash
-cd /opt/streamhub
+cd /opt/piyakast
 git pull origin main
 npm install
 npm run build
-sudo systemctl restart streamhub
+sudo systemctl restart piyakast
 ```
 
 ### 보안 업데이트
@@ -497,9 +498,9 @@ sudo systemctl restart nginx postgresql
 
 ## 지원 및 문의
 
-- GitHub Issues: https://github.com/your-username/streamhub/issues
-- 문서: https://github.com/your-username/streamhub/wiki
-- 이메일: support@streamhub.com
+- GitHub Issues: https://github.com/your-username/piyakast/issues
+- 문서: https://github.com/your-username/piyakast/wiki
+- 이메일: support@piyakast.com
 
 ## 라이선스
 
