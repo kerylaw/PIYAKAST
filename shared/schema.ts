@@ -146,18 +146,66 @@ export const commentLikes = pgTable("comment_likes", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// Superchat donations
+// Payment transactions for SuperChat
+export const payments = pgTable("payments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  streamId: varchar("stream_id").notNull().references(() => streams.id),
+  stripePaymentIntentId: varchar("stripe_payment_intent_id").unique(),
+  amount: integer("amount").notNull(), // in won (KRW)
+  currency: varchar("currency").default("KRW"),
+  status: varchar("status").default("pending"), // pending, completed, failed, refunded
+  creatorAmount: integer("creator_amount"), // 70% of amount
+  platformAmount: integer("platform_amount"), // 30% of amount
+  message: text("message"), // SuperChat message
+  isSuperchat: boolean("is_superchat").default(true),
+  metadata: jsonb("metadata"), // additional payment data
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Superchat donations (enhanced with payment tracking)
 export const superchats = pgTable("superchats", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   streamId: varchar("stream_id").notNull().references(() => streams.id),
   userId: varchar("user_id").notNull().references(() => users.id),
+  paymentId: varchar("payment_id").references(() => payments.id),
   message: text("message").notNull(),
   amount: integer("amount").notNull(),
   currency: varchar("currency").default("KRW"),
   color: varchar("color").notNull(),
   displayDuration: integer("display_duration").default(120), // seconds
+  isPinned: boolean("is_pinned").default(false),
+  pinnedUntil: timestamp("pinned_until"), // when the pin expires
   isProcessed: boolean("is_processed").default(false),
   createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Video thumbnails table for thumbnail selection
+export const videoThumbnails = pgTable("video_thumbnails", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  videoId: varchar("video_id").notNull().references(() => videos.id),
+  thumbnailUrl: varchar("thumbnail_url").notNull(),
+  timecode: integer("timecode").notNull(), // seconds into video
+  isSelected: boolean("is_selected").default(false),
+  isGenerated: boolean("is_generated").default(true), // auto-generated vs uploaded
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Creator monetization settings
+export const creatorSettings = pgTable("creator_settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id).unique(),
+  isMonetizationEnabled: boolean("is_monetization_enabled").default(false),
+  isSuperchatEnabled: boolean("is_superchat_enabled").default(false),
+  isLiveStreamingEnabled: boolean("is_live_streaming_enabled").default(false),
+  isEligible: boolean("is_eligible").default(false), // 18+, approved country
+  stripeAccountId: varchar("stripe_account_id"), // for payouts
+  country: varchar("country").default("KR"),
+  dateOfBirth: timestamp("date_of_birth"),
+  isVerified: boolean("is_verified").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 // User subscriptions/memberships
@@ -173,7 +221,7 @@ export const subscriptions = pgTable("subscriptions", {
 });
 
 // Relations
-export const usersRelations = relations(users, ({ many }) => ({
+export const usersRelations = relations(users, ({ many, one }) => ({
   videos: many(videos),
   streams: many(streams),
   comments: many(comments),
@@ -181,21 +229,26 @@ export const usersRelations = relations(users, ({ many }) => ({
   videoLikes: many(videoLikes),
   commentLikes: many(commentLikes),
   superchats: many(superchats),
+  payments: many(payments),
   subscriptions: many(subscriptions, { relationName: "subscriber" }),
   subscribers: many(subscriptions, { relationName: "channel" }),
   followers: many(follows, { relationName: "following" }),
   following: many(follows, { relationName: "follower" }),
+  creatorSettings: one(creatorSettings),
 }));
 
 export const videosRelations = relations(videos, ({ one, many }) => ({
   user: one(users, { fields: [videos.userId], references: [users.id] }),
   comments: many(comments),
   likes: many(videoLikes),
+  thumbnails: many(videoThumbnails),
 }));
 
 export const streamsRelations = relations(streams, ({ one, many }) => ({
   user: one(users, { fields: [streams.userId], references: [users.id] }),
   chatMessages: many(chatMessages),
+  superchats: many(superchats),
+  payments: many(payments),
 }));
 
 export const commentsRelations = relations(comments, ({ one }) => ({
@@ -223,9 +276,23 @@ export const commentLikesRelations = relations(commentLikes, ({ one }) => ({
   user: one(users, { fields: [commentLikes.userId], references: [users.id] }),
 }));
 
+export const paymentsRelations = relations(payments, ({ one }) => ({
+  user: one(users, { fields: [payments.userId], references: [users.id] }),
+  stream: one(streams, { fields: [payments.streamId], references: [streams.id] }),
+}));
+
 export const superchatsRelations = relations(superchats, ({ one }) => ({
   stream: one(streams, { fields: [superchats.streamId], references: [streams.id] }),
   user: one(users, { fields: [superchats.userId], references: [users.id] }),
+  payment: one(payments, { fields: [superchats.paymentId], references: [payments.id] }),
+}));
+
+export const videoThumbnailsRelations = relations(videoThumbnails, ({ one }) => ({
+  video: one(videos, { fields: [videoThumbnails.videoId], references: [videos.id] }),
+}));
+
+export const creatorSettingsRelations = relations(creatorSettings, ({ one }) => ({
+  user: one(users, { fields: [creatorSettings.userId], references: [users.id] }),
 }));
 
 export const subscriptionsRelations = relations(subscriptions, ({ one }) => ({
@@ -281,10 +348,31 @@ export const insertCommentLikeSchema = createInsertSchema(commentLikes).omit({
   createdAt: true,
 });
 
+export const insertPaymentSchema = createInsertSchema(payments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  creatorAmount: true,
+  platformAmount: true,
+});
+
 export const insertSuperchatSchema = createInsertSchema(superchats).omit({
   id: true,
   createdAt: true,
   isProcessed: true,
+  isPinned: true,
+  pinnedUntil: true,
+});
+
+export const insertVideoThumbnailSchema = createInsertSchema(videoThumbnails).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertCreatorSettingsSchema = createInsertSchema(creatorSettings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
 });
 
 export const insertSubscriptionSchema = createInsertSchema(subscriptions).omit({
@@ -330,7 +418,13 @@ export type InsertFollow = z.infer<typeof insertFollowSchema>;
 export type Follow = typeof follows.$inferSelect;
 export type InsertCommentLike = z.infer<typeof insertCommentLikeSchema>;
 export type CommentLike = typeof commentLikes.$inferSelect;
+export type InsertPayment = z.infer<typeof insertPaymentSchema>;
+export type Payment = typeof payments.$inferSelect;
 export type InsertSuperchat = z.infer<typeof insertSuperchatSchema>;
 export type Superchat = typeof superchats.$inferSelect;
+export type InsertVideoThumbnail = z.infer<typeof insertVideoThumbnailSchema>;
+export type VideoThumbnail = typeof videoThumbnails.$inferSelect;
+export type InsertCreatorSettings = z.infer<typeof insertCreatorSettingsSchema>;
+export type CreatorSettings = typeof creatorSettings.$inferSelect;
 export type InsertSubscription = z.infer<typeof insertSubscriptionSchema>;
 export type Subscription = typeof subscriptions.$inferSelect;

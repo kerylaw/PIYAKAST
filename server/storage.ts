@@ -9,6 +9,9 @@ import {
   commentLikes,
   superchats,
   subscriptions,
+  payments,
+  videoThumbnails,
+  creatorSettings,
   type User,
   type UpsertUser,
   type Video,
@@ -27,6 +30,12 @@ import {
   type InsertCommentLike,
   type Superchat,
   type InsertSuperchat,
+  type Payment,
+  type InsertPayment,
+  type VideoThumbnail,
+  type InsertVideoThumbnail,
+  type CreatorSettings,
+  type InsertCreatorSettings,
   type Subscription,
   type InsertSubscription,
 } from "@shared/schema";
@@ -83,9 +92,26 @@ export interface IStorage {
   toggleCommentLike(like: InsertCommentLike): Promise<CommentLike | null>;
   updateCommentCounts(commentId: string): Promise<void>;
   
+  // Payment operations
+  createPayment(payment: InsertPayment): Promise<Payment>;
+  updatePaymentStatus(id: string, status: string, metadata?: any): Promise<Payment>;
+  getPayment(id: string): Promise<Payment | undefined>;
+  getPaymentsByUser(userId: string): Promise<Payment[]>;
+  
   // Superchat operations
   createSuperchat(superchat: InsertSuperchat): Promise<Superchat>;
   getSuperchats(streamId: string): Promise<Superchat[]>;
+  updateSuperchatPin(id: string, isPinned: boolean, pinnedUntil?: Date): Promise<void>;
+  
+  // Video thumbnail operations
+  createVideoThumbnail(thumbnail: InsertVideoThumbnail): Promise<VideoThumbnail>;
+  getVideoThumbnails(videoId: string): Promise<VideoThumbnail[]>;
+  selectVideoThumbnail(videoId: string, thumbnailId: string): Promise<void>;
+  
+  // Creator settings operations
+  createCreatorSettings(settings: InsertCreatorSettings): Promise<CreatorSettings>;
+  getCreatorSettings(userId: string): Promise<CreatorSettings | undefined>;
+  updateCreatorSettings(userId: string, settings: Partial<CreatorSettings>): Promise<CreatorSettings>;
   
   // Subscription operations
   createSubscription(subscription: InsertSubscription): Promise<Subscription>;
@@ -268,7 +294,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getCommentsByVideo(videoId: string): Promise<any[]> {
-    return await db
+    const result = await db
       .select({
         id: comments.id,
         videoId: comments.videoId,
@@ -285,6 +311,7 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(users, eq(comments.userId, users.id))
       .where(eq(comments.videoId, videoId))
       .orderBy(desc(comments.createdAt));
+    return Array.isArray(result) ? result : [];
   }
 
   async deleteComment(id: string): Promise<void> {
@@ -298,7 +325,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getChatMessagesByStream(streamId: string, limit = 50): Promise<any[]> {
-    return await db
+    const result = await db
       .select({
         id: chatMessages.id,
         streamId: chatMessages.streamId,
@@ -316,6 +343,7 @@ export class DatabaseStorage implements IStorage {
       .where(eq(chatMessages.streamId, streamId))
       .orderBy(desc(chatMessages.createdAt))
       .limit(limit);
+    return Array.isArray(result) ? result : [];
   }
 
   // Video likes operations
@@ -403,11 +431,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getCommentReplies(commentId: string): Promise<Comment[]> {
-    return await db
+    const result = await db
       .select()
       .from(comments)
       .where(eq(comments.parentId, commentId))
       .orderBy(comments.createdAt);
+    return Array.isArray(result) ? result : [];
   }
 
   async toggleCommentLike(like: InsertCommentLike): Promise<CommentLike | null> {
@@ -469,18 +498,145 @@ export class DatabaseStorage implements IStorage {
       .where(eq(comments.id, commentId));
   }
 
+  // Payment operations
+  async createPayment(payment: InsertPayment): Promise<Payment> {
+    // Calculate revenue split (70% creator, 30% platform)
+    const creatorAmount = Math.floor(payment.amount * 0.7);
+    const platformAmount = payment.amount - creatorAmount;
+    
+    const [created] = await db.insert(payments).values({
+      ...payment,
+      creatorAmount,
+      platformAmount,
+    }).returning();
+    return created;
+  }
+
+  async updatePaymentStatus(id: string, status: string, metadata?: any): Promise<Payment> {
+    const [updated] = await db
+      .update(payments)
+      .set({ status, metadata, updatedAt: new Date() })
+      .where(eq(payments.id, id))
+      .returning();
+    return updated;
+  }
+
+  async getPayment(id: string): Promise<Payment | undefined> {
+    const [payment] = await db.select().from(payments).where(eq(payments.id, id));
+    return payment;
+  }
+
+  async getPaymentsByUser(userId: string): Promise<Payment[]> {
+    return await db
+      .select()
+      .from(payments)
+      .where(eq(payments.userId, userId))
+      .orderBy(desc(payments.createdAt));
+  }
+
   // Superchat operations
   async createSuperchat(superchat: InsertSuperchat): Promise<Superchat> {
     const [created] = await db.insert(superchats).values(superchat).returning();
     return created;
   }
 
-  async getSuperchats(streamId: string): Promise<Superchat[]> {
+  async getSuperchats(streamId: string): Promise<any[]> {
     return await db
-      .select()
+      .select({
+        id: superchats.id,
+        streamId: superchats.streamId,
+        userId: superchats.userId,
+        paymentId: superchats.paymentId,
+        message: superchats.message,
+        amount: superchats.amount,
+        currency: superchats.currency,
+        color: superchats.color,
+        displayDuration: superchats.displayDuration,
+        isPinned: superchats.isPinned,
+        pinnedUntil: superchats.pinnedUntil,
+        isProcessed: superchats.isProcessed,
+        createdAt: superchats.createdAt,
+        user: {
+          id: users.id,
+          username: users.username,
+          profileImageUrl: users.profileImageUrl,
+        },
+      })
       .from(superchats)
+      .leftJoin(users, eq(superchats.userId, users.id))
       .where(eq(superchats.streamId, streamId))
       .orderBy(desc(superchats.createdAt));
+  }
+
+  async updateSuperchatPin(id: string, isPinned: boolean, pinnedUntil?: Date): Promise<void> {
+    await db
+      .update(superchats)
+      .set({ isPinned, pinnedUntil })
+      .where(eq(superchats.id, id));
+  }
+
+  // Video thumbnail operations
+  async createVideoThumbnail(thumbnail: InsertVideoThumbnail): Promise<VideoThumbnail> {
+    const [created] = await db.insert(videoThumbnails).values(thumbnail).returning();
+    return created;
+  }
+
+  async getVideoThumbnails(videoId: string): Promise<VideoThumbnail[]> {
+    return await db
+      .select()
+      .from(videoThumbnails)
+      .where(eq(videoThumbnails.videoId, videoId))
+      .orderBy(videoThumbnails.timecode);
+  }
+
+  async selectVideoThumbnail(videoId: string, thumbnailId: string): Promise<void> {
+    // First, unselect all thumbnails for this video
+    await db
+      .update(videoThumbnails)
+      .set({ isSelected: false })
+      .where(eq(videoThumbnails.videoId, videoId));
+    
+    // Then select the chosen thumbnail
+    await db
+      .update(videoThumbnails)
+      .set({ isSelected: true })
+      .where(eq(videoThumbnails.id, thumbnailId));
+    
+    // Update the video's thumbnail URL
+    const [selectedThumbnail] = await db
+      .select()
+      .from(videoThumbnails)
+      .where(eq(videoThumbnails.id, thumbnailId));
+    
+    if (selectedThumbnail) {
+      await db
+        .update(videos)
+        .set({ thumbnailUrl: selectedThumbnail.thumbnailUrl })
+        .where(eq(videos.id, videoId));
+    }
+  }
+
+  // Creator settings operations
+  async createCreatorSettings(settings: InsertCreatorSettings): Promise<CreatorSettings> {
+    const [created] = await db.insert(creatorSettings).values(settings).returning();
+    return created;
+  }
+
+  async getCreatorSettings(userId: string): Promise<CreatorSettings | undefined> {
+    const [settings] = await db
+      .select()
+      .from(creatorSettings)
+      .where(eq(creatorSettings.userId, userId));
+    return settings;
+  }
+
+  async updateCreatorSettings(userId: string, settings: Partial<CreatorSettings>): Promise<CreatorSettings> {
+    const [updated] = await db
+      .update(creatorSettings)
+      .set({ ...settings, updatedAt: new Date() })
+      .where(eq(creatorSettings.userId, userId))
+      .returning();
+    return updated;
   }
 
   // Subscription operations

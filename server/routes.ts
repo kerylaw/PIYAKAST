@@ -1,4 +1,5 @@
 import type { Express } from "express";
+import express from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
@@ -13,7 +14,17 @@ import {
   insertFollowSchema,
   insertSuperchatSchema,
   insertCommentLikeSchema,
+  insertPaymentSchema,
+  insertVideoThumbnailSchema,
 } from "@shared/schema";
+import Stripe from "stripe";
+import { spawn } from "child_process";
+import { promisify } from "util";
+
+// Initialize Stripe
+const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SECRET_KEY, {
+  apiVersion: "2023-10-16",
+}) : null;
 import multer from "multer";
 import path from "path";
 import { initializePeerTube, getPeerTubeClient } from "./peertube";
@@ -601,6 +612,303 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to fetch followers" });
     }
   });
+
+  // Video thumbnail routes
+  app.post('/api/videos/:videoId/thumbnails', requireAuth, async (req: any, res) => {
+    try {
+      const { videoId } = req.params;
+      const userId = req.user.id;
+      
+      // Verify video ownership
+      const video = await storage.getVideo(videoId);
+      if (!video) {
+        return res.status(404).json({ message: "Video not found" });
+      }
+      
+      if (video.userId !== userId) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+
+      // Generate thumbnails using ffmpeg
+      const thumbnails = [];
+      const videoPath = video.videoUrl.startsWith('/uploads/') 
+        ? path.join(process.cwd(), video.videoUrl)
+        : video.videoUrl;
+      
+      if (fs.existsSync(videoPath)) {
+        // Generate thumbnails at different time intervals
+        const intervals = [10, 30, 60, 120, 180]; // seconds
+        
+        for (const interval of intervals) {
+          const thumbnailPath = path.join('uploads/thumbnails', `${videoId}_${interval}.jpg`);
+          const thumbnailDir = path.dirname(thumbnailPath);
+          
+          // Ensure thumbnail directory exists
+          if (!fs.existsSync(thumbnailDir)) {
+            fs.mkdirSync(thumbnailDir, { recursive: true });
+          }
+          
+          try {
+            // Use ffmpeg to extract thumbnail
+            await new Promise((resolve, reject) => {
+              const ffmpeg = spawn('ffmpeg', [
+                '-i', videoPath,
+                '-ss', interval.toString(),
+                '-vframes', '1',
+                '-f', 'image2',
+                '-y', // Overwrite output file
+                thumbnailPath
+              ]);
+              
+              ffmpeg.on('close', (code) => {
+                if (code === 0) resolve(null);
+                else reject(new Error(`ffmpeg failed with code ${code}`));
+              });
+              
+              ffmpeg.on('error', reject);
+            });
+            
+            // Create thumbnail record in database
+            const thumbnail = await storage.createVideoThumbnail({
+              videoId,
+              thumbnailUrl: `/${thumbnailPath}`,
+              timecode: interval,
+              isSelected: thumbnails.length === 0, // First thumbnail is default
+            });
+            
+            thumbnails.push(thumbnail);
+          } catch (error) {
+            console.warn(`Failed to generate thumbnail at ${interval}s:`, error);
+          }
+        }
+      }
+      
+      if (thumbnails.length === 0) {
+        return res.status(500).json({ message: "Failed to generate thumbnails" });
+      }
+      
+      res.json({ thumbnails });
+    } catch (error) {
+      console.error("Error generating thumbnails:", error);
+      res.status(500).json({ message: "Failed to generate thumbnails" });
+    }
+  });
+
+  app.put('/api/videos/:videoId/thumbnail/:thumbnailId', requireAuth, async (req: any, res) => {
+    try {
+      const { videoId, thumbnailId } = req.params;
+      const userId = req.user.id;
+      
+      // Verify video ownership
+      const video = await storage.getVideo(videoId);
+      if (!video) {
+        return res.status(404).json({ message: "Video not found" });
+      }
+      
+      if (video.userId !== userId) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+      
+      await storage.selectVideoThumbnail(videoId, thumbnailId);
+      res.json({ message: "Thumbnail selected successfully" });
+    } catch (error) {
+      console.error("Error selecting thumbnail:", error);
+      res.status(500).json({ message: "Failed to select thumbnail" });
+    }
+  });
+
+  // SuperChat payment routes
+  app.post('/api/superchat/payment-intent', requireAuth, async (req: any, res) => {
+    try {
+      if (!stripe) {
+        return res.status(400).json({ message: "Payment system not configured" });
+      }
+      
+      const { streamId, message, amount, currency = "KRW" } = req.body;
+      const userId = req.user.id;
+      
+      // Verify stream exists
+      const stream = await storage.getStream(streamId);
+      if (!stream) {
+        return res.status(404).json({ message: "Stream not found" });
+      }
+      
+      // Check if stream owner has monetization enabled
+      const creatorSettings = await storage.getCreatorSettings(stream.userId);
+      if (!creatorSettings?.isSuperchatEnabled || !creatorSettings?.isMonetizationEnabled) {
+        return res.status(400).json({ message: "SuperChat not enabled for this stream" });
+      }
+      
+      // Create payment intent with Stripe
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amount, // Amount in smallest currency unit (원 for KRW)
+        currency: currency.toLowerCase(),
+        metadata: {
+          streamId,
+          userId,
+          message: message.substring(0, 200), // Limit message length
+          type: 'superchat'
+        }
+      });
+      
+      // Create payment record in database
+      await storage.createPayment({
+        userId,
+        streamId,
+        stripePaymentIntentId: paymentIntent.id,
+        amount,
+        currency,
+        type: 'superchat',
+        status: 'pending',
+      });
+      
+      res.json({ clientSecret: paymentIntent.client_secret });
+    } catch (error) {
+      console.error("Error creating payment intent:", error);
+      res.status(500).json({ message: "Failed to create payment intent" });
+    }
+  });
+
+  app.post('/api/superchat/confirm', requireAuth, async (req: any, res) => {
+    try {
+      if (!stripe) {
+        return res.status(400).json({ message: "Payment system not configured" });
+      }
+      
+      const { paymentIntentId, streamId, message, amount } = req.body;
+      const userId = req.user.id;
+      
+      // Verify payment with Stripe
+      const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+      
+      if (paymentIntent.status !== 'succeeded') {
+        return res.status(400).json({ message: "Payment not completed" });
+      }
+      
+      // Update payment status
+      await storage.updatePaymentStatus(paymentIntentId, 'completed', {
+        stripePaymentIntent: paymentIntent
+      });
+      
+      // Determine SuperChat tier and display duration
+      const tiers = [
+        { name: "Bronze", min: 1000, max: 4999, duration: 5, color: "#CD7F32" },
+        { name: "Silver", min: 5000, max: 9999, duration: 10, color: "#C0C0C0" },
+        { name: "Gold", min: 10000, max: 19999, duration: 20, color: "#FFD700" },
+        { name: "Diamond", min: 20000, max: 49999, duration: 30, color: "#B9F2FF" },
+        { name: "Premium", min: 50000, max: 999999, duration: 60, color: "#FF6B6B" },
+      ];
+      
+      const tier = tiers.find(t => amount >= t.min && amount <= t.max) || tiers[0];
+      const pinnedUntil = new Date(Date.now() + tier.duration * 1000);
+      
+      // Create SuperChat record
+      const superchat = await storage.createSuperchat({
+        streamId,
+        userId,
+        paymentId: paymentIntentId,
+        message: message.substring(0, 200),
+        amount,
+        currency: 'KRW',
+        color: tier.color,
+        displayDuration: tier.duration,
+        isPinned: true,
+        pinnedUntil,
+      });
+      
+      // Broadcast SuperChat to stream viewers via WebSocket
+      const superchatData = {
+        ...superchat,
+        user: await storage.getUser(userId)
+      };
+      
+      // Broadcast to stream room
+      const messageStr = JSON.stringify({
+        type: 'superchat',
+        data: superchatData,
+        streamId
+      });
+      
+      if (streamConnections.has(streamId)) {
+        streamConnections.get(streamId)!.forEach(client => {
+          if (client.readyState === 1) { // WebSocket.OPEN
+            client.send(messageStr);
+          }
+        });
+      }
+      
+      res.json(superchatData);
+    } catch (error) {
+      console.error("Error confirming SuperChat:", error);
+      res.status(500).json({ message: "Failed to confirm SuperChat" });
+    }
+  });
+
+  // SuperChat management routes
+  app.get('/api/superchats/:streamId', async (req, res) => {
+    try {
+      const superchats = await storage.getSuperchats(req.params.streamId);
+      res.json(superchats);
+    } catch (error) {
+      console.error("Error fetching superchats:", error);
+      res.status(500).json({ message: "Failed to fetch superchats" });
+    }
+  });
+
+  // Creator settings routes
+  app.get('/api/creator-settings/:userId', async (req, res) => {
+    try {
+      const settings = await storage.getCreatorSettings(req.params.userId);
+      if (!settings) {
+        // Return default settings if none exist
+        return res.json({
+          isMonetizationEnabled: false,
+          isSuperchatEnabled: false,
+          minSuperchatAmount: 1000,
+          maxSuperchatAmount: 999999,
+        });
+      }
+      res.json(settings);
+    } catch (error) {
+      console.error("Error fetching creator settings:", error);
+      res.status(500).json({ message: "Failed to fetch creator settings" });
+    }
+  });
+
+  app.put('/api/creator-settings/:userId', requireAuth, async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+      const requestUserId = req.user.id;
+      
+      // Users can only update their own settings
+      if (userId !== requestUserId) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+      
+      const settings = req.body;
+      
+      // Check if settings exist
+      const existingSettings = await storage.getCreatorSettings(userId);
+      
+      let updatedSettings;
+      if (existingSettings) {
+        updatedSettings = await storage.updateCreatorSettings(userId, settings);
+      } else {
+        updatedSettings = await storage.createCreatorSettings({
+          userId,
+          ...settings,
+        });
+      }
+      
+      res.json(updatedSettings);
+    } catch (error) {
+      console.error("Error updating creator settings:", error);
+      res.status(500).json({ message: "Failed to update creator settings" });
+    }
+  });
+
+  // Static file serving for thumbnails
+  app.use('/uploads/thumbnails', express.static(path.join(process.cwd(), 'uploads/thumbnails')));
 
   // Create HTTP server
   const httpServer = createServer(app);
