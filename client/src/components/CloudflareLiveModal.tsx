@@ -39,21 +39,8 @@ export default function CloudflareLiveModal({ isOpen, onClose }: CloudflareLiveM
 
   const createCloudflareStreamMutation = useMutation({
     mutationFn: async (data: { title: string; description: string; category: string }) => {
-      const response = await fetch("/api/streams/cloudflare", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-        body: JSON.stringify(data),
-      });
-
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({ message: "Unknown error" }));
-        throw new Error(`${response.status}: ${error.message || "Request failed"}`);
-      }
-
-      return response.json();
+      const response = await apiRequest("/api/streams/cloudflare", "POST", data);
+      return await response.json();
     },
     onSuccess: (response: any) => {
       console.log('Cloudflare Stream Created:', response);
