@@ -19,6 +19,7 @@ import Category from "@/pages/Category";
 import AuthPage from "@/pages/auth-page";
 import Studio from "@/pages/Studio";
 import AdminPage from "@/pages/AdminPage";
+import ChannelMembership from "@/pages/ChannelMembership";
 
 // Global stream heartbeat manager
 function StreamHeartbeatManager() {
@@ -120,6 +121,7 @@ function Router() {
             <Route path="/profile/:username" component={Profile} />
             <Route path="/studio" component={Studio} />
             <Route path="/admin" component={AdminPage} />
+            <Route path="/channel/:channelId/membership" component={ChannelMembership} />
           </>
         )}
         <Route component={NotFound} />

@@ -5,6 +5,7 @@ import { ThumbsUp, ThumbsDown, Share2, Flag, UserPlus, Shield, AlertTriangle } f
 import Layout from "@/components/Layout";
 import VideoPlayer from "@/components/VideoPlayer";
 import VideoCard from "@/components/VideoCard";
+import SubscribeButton from "@/components/SubscribeButton";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -400,17 +401,11 @@ export default function VideoWatch() {
                       <p className="text-gray-400 text-sm">Content Creator</p>
                     </div>
                   </div>
-                  {video?.userId !== user?.id && (
-                    <Button
-                      onClick={() => followMutation.mutate()}
-                      disabled={followMutation.isPending}
-                      className="bg-primary-purple hover:bg-purple-700"
-                      data-testid={`button-follow-${video?.user?.username}`}
-                    >
-                      <UserPlus className="h-4 w-4 mr-2" />
-                      Follow
-                    </Button>
-                  )}
+                  <SubscribeButton 
+                    channelId={video?.userId || ""}
+                    channelName={video?.user?.username}
+                    size="default"
+                  />
                 </div>
               )}
               

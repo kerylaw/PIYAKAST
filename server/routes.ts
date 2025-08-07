@@ -1526,5 +1526,287 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
+  // ========== MEMBERSHIP & SUBSCRIPTION API ==========
+  
+  // Channel membership tiers
+  app.get('/api/channels/:channelId/membership-tiers', async (req, res) => {
+    try {
+      const { channelId } = req.params;
+      const tiers = await storage.getMembershipTiers(channelId);
+      res.json(tiers);
+    } catch (error) {
+      console.error('Error fetching membership tiers:', error);
+      res.status(500).json({ message: 'Failed to fetch membership tiers' });
+    }
+  });
+
+  app.post('/api/channels/:channelId/membership-tiers', requireAuth, async (req, res) => {
+    try {
+      const { channelId } = req.params;
+      const userId = req.user?.id;
+      
+      // Check if user owns the channel
+      if (userId !== channelId) {
+        return res.status(403).json({ message: 'Not authorized' });
+      }
+      
+      const { name, description, monthlyPrice, yearlyPrice, color, emoji } = req.body;
+      
+      const tier = await storage.createMembershipTier({
+        channelId,
+        name,
+        description,
+        monthlyPrice,
+        yearlyPrice,
+        color,
+        emoji,
+      });
+      
+      res.status(201).json(tier);
+    } catch (error) {
+      console.error('Error creating membership tier:', error);
+      res.status(500).json({ message: 'Failed to create membership tier' });
+    }
+  });
+
+  app.put('/api/membership-tiers/:tierId', requireAuth, async (req, res) => {
+    try {
+      const { tierId } = req.params;
+      const userId = req.user?.id;
+      
+      // Get tier to check ownership
+      const tier = await storage.getMembershipTier(tierId);
+      if (!tier || tier.channelId !== userId) {
+        return res.status(403).json({ message: 'Not authorized' });
+      }
+      
+      const updatedTier = await storage.updateMembershipTier(tierId, req.body);
+      res.json(updatedTier);
+    } catch (error) {
+      console.error('Error updating membership tier:', error);
+      res.status(500).json({ message: 'Failed to update membership tier' });
+    }
+  });
+
+  app.delete('/api/membership-tiers/:tierId', requireAuth, async (req, res) => {
+    try {
+      const { tierId } = req.params;
+      const userId = req.user?.id;
+      
+      // Get tier to check ownership
+      const tier = await storage.getMembershipTier(tierId);
+      if (!tier || tier.channelId !== userId) {
+        return res.status(403).json({ message: 'Not authorized' });
+      }
+      
+      await storage.deleteMembershipTier(tierId);
+      res.status(204).send();
+    } catch (error) {
+      console.error('Error deleting membership tier:', error);
+      res.status(500).json({ message: 'Failed to delete membership tier' });
+    }
+  });
+
+  // Membership benefits
+  app.get('/api/membership-tiers/:tierId/benefits', async (req, res) => {
+    try {
+      const { tierId } = req.params;
+      const benefits = await storage.getMembershipBenefits(tierId);
+      res.json(benefits);
+    } catch (error) {
+      console.error('Error fetching membership benefits:', error);
+      res.status(500).json({ message: 'Failed to fetch membership benefits' });
+    }
+  });
+
+  app.post('/api/membership-tiers/:tierId/benefits', requireAuth, async (req, res) => {
+    try {
+      const { tierId } = req.params;
+      const userId = req.user?.id;
+      
+      // Check tier ownership
+      const tier = await storage.getMembershipTier(tierId);
+      if (!tier || tier.channelId !== userId) {
+        return res.status(403).json({ message: 'Not authorized' });
+      }
+      
+      const benefit = await storage.createMembershipBenefit({
+        tierId,
+        ...req.body,
+      });
+      
+      res.status(201).json(benefit);
+    } catch (error) {
+      console.error('Error creating membership benefit:', error);
+      res.status(500).json({ message: 'Failed to create membership benefit' });
+    }
+  });
+
+  // User subscriptions
+  app.get('/api/users/:userId/subscriptions', requireAuth, async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const currentUserId = req.user?.id;
+      
+      // Users can only view their own subscriptions
+      if (userId !== currentUserId) {
+        return res.status(403).json({ message: 'Not authorized' });
+      }
+      
+      const subscriptions = await storage.getSubscriptionsByUser(userId);
+      res.json(subscriptions);
+    } catch (error) {
+      console.error('Error fetching user subscriptions:', error);
+      res.status(500).json({ message: 'Failed to fetch subscriptions' });
+    }
+  });
+
+  app.get('/api/channels/:channelId/subscribers', requireAuth, async (req, res) => {
+    try {
+      const { channelId } = req.params;
+      const userId = req.user?.id;
+      
+      // Only channel owner can view subscribers
+      if (channelId !== userId) {
+        return res.status(403).json({ message: 'Not authorized' });
+      }
+      
+      const subscribers = await storage.getSubscribersByChannel(channelId);
+      res.json(subscribers);
+    } catch (error) {
+      console.error('Error fetching channel subscribers:', error);
+      res.status(500).json({ message: 'Failed to fetch subscribers' });
+    }
+  });
+
+  // Subscribe/unsubscribe (follow functionality)
+  app.post('/api/channels/:channelId/subscribe', requireAuth, async (req, res) => {
+    try {
+      const { channelId } = req.params;
+      const userId = req.user?.id;
+      
+      if (userId === channelId) {
+        return res.status(400).json({ message: 'Cannot subscribe to your own channel' });
+      }
+      
+      // Check if already subscribed
+      const existingSubscription = await storage.getSubscription(userId, channelId);
+      if (existingSubscription) {
+        return res.status(400).json({ message: 'Already subscribed' });
+      }
+      
+      const subscription = await storage.createSubscription({
+        userId,
+        channelId,
+        type: 'follow',
+      });
+      
+      // Create default notification settings
+      await storage.createSubscriptionSettings({
+        subscriptionId: subscription.id,
+      });
+      
+      res.status(201).json(subscription);
+    } catch (error) {
+      console.error('Error subscribing to channel:', error);
+      res.status(500).json({ message: 'Failed to subscribe' });
+    }
+  });
+
+  app.delete('/api/channels/:channelId/subscribe', requireAuth, async (req, res) => {
+    try {
+      const { channelId } = req.params;
+      const userId = req.user?.id;
+      
+      await storage.cancelSubscription(userId, channelId);
+      res.status(204).send();
+    } catch (error) {
+      console.error('Error unsubscribing from channel:', error);
+      res.status(500).json({ message: 'Failed to unsubscribe' });
+    }
+  });
+
+  // Get user's membership for a specific channel
+  app.get('/api/channels/:channelId/membership', requireAuth, async (req, res) => {
+    try {
+      const { channelId } = req.params;
+      const userId = req.user?.id;
+      
+      const membership = await storage.getUserMembership(userId, channelId);
+      res.json(membership || { subscription: null, tier: null, channel: null });
+    } catch (error) {
+      console.error('Error fetching user membership:', error);
+      res.status(500).json({ message: 'Failed to fetch membership' });
+    }
+  });
+
+  // Member content
+  app.get('/api/channels/:channelId/member-content', requireAuth, async (req, res) => {
+    try {
+      const { channelId } = req.params;
+      const { tierId } = req.query;
+      const userId = req.user?.id;
+      
+      // Check if user has access to member content
+      const membership = await storage.getUserMembership(userId, channelId);
+      if (!membership || !membership.subscription?.isActive) {
+        return res.status(403).json({ message: 'Membership required' });
+      }
+      
+      const content = await storage.getMemberContent(channelId, tierId as string);
+      res.json(content);
+    } catch (error) {
+      console.error('Error fetching member content:', error);
+      res.status(500).json({ message: 'Failed to fetch member content' });
+    }
+  });
+
+  app.post('/api/channels/:channelId/member-content', requireAuth, async (req, res) => {
+    try {
+      const { channelId } = req.params;
+      const userId = req.user?.id;
+      
+      // Check if user owns the channel
+      if (userId !== channelId) {
+        return res.status(403).json({ message: 'Not authorized' });
+      }
+      
+      const content = await storage.createMemberContent({
+        channelId,
+        ...req.body,
+      });
+      
+      res.status(201).json(content);
+    } catch (error) {
+      console.error('Error creating member content:', error);
+      res.status(500).json({ message: 'Failed to create member content' });
+    }
+  });
+
+  // Channel revenue (for creators)
+  app.get('/api/channels/:channelId/revenue', requireAuth, async (req, res) => {
+    try {
+      const { channelId } = req.params;
+      const userId = req.user?.id;
+      
+      // Only channel owner can view revenue
+      if (channelId !== userId) {
+        return res.status(403).json({ message: 'Not authorized' });
+      }
+      
+      const { startDate, endDate } = req.query;
+      const revenue = await storage.getChannelRevenue(
+        channelId, 
+        startDate ? new Date(startDate as string) : undefined,
+        endDate ? new Date(endDate as string) : undefined
+      );
+      
+      res.json(revenue);
+    } catch (error) {
+      console.error('Error fetching channel revenue:', error);
+      res.status(500).json({ message: 'Failed to fetch revenue' });
+    }
+  });
+
   return httpServer;
 }

@@ -271,17 +271,118 @@ export const creatorSettings = pgTable("creator_settings", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// User subscriptions/memberships
+// Membership tiers for creators (YouTube-style channel memberships)
+export const membershipTiers = pgTable("membership_tiers", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  channelId: varchar("channel_id").notNull().references(() => users.id),
+  name: varchar("name").notNull(), // e.g., "Bronze", "Silver", "Gold"
+  description: text("description"),
+  monthlyPrice: integer("monthly_price").notNull(), // in won (KRW)
+  yearlyPrice: integer("yearly_price"), // optional yearly discount
+  color: varchar("color").default("#6366f1"), // hex color for the tier
+  emoji: varchar("emoji"), // optional emoji for the tier
+  isActive: boolean("is_active").default(true),
+  sortOrder: integer("sort_order").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("IDX_membership_tiers_channel_id").on(table.channelId),
+  index("IDX_membership_tiers_price").on(table.monthlyPrice),
+  index("IDX_membership_tiers_active").on(table.isActive),
+  check("CHK_membership_tiers_price", sql`${table.monthlyPrice} >= 1000`), // minimum 1,000 KRW
+]);
+
+// Membership benefits for each tier
+export const membershipBenefits = pgTable("membership_benefits", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tierId: varchar("tier_id").notNull().references(() => membershipTiers.id),
+  type: varchar("type").notNull(), // "emoji", "badge", "early_access", "exclusive_content", "chat_color", "live_chat_priority"
+  title: varchar("title").notNull(),
+  description: text("description"),
+  value: text("value"), // JSON or text value for the benefit
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("IDX_membership_benefits_tier_id").on(table.tierId),
+  index("IDX_membership_benefits_type").on(table.type),
+  check("CHK_membership_benefits_type", 
+    sql`${table.type} IN ('emoji', 'badge', 'early_access', 'exclusive_content', 'chat_color', 'live_chat_priority', 'custom')`),
+]);
+
+// User subscriptions/memberships (enhanced)
 export const subscriptions = pgTable("subscriptions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id),
   channelId: varchar("channel_id").notNull().references(() => users.id),
-  tier: varchar("tier").default("basic"), // basic, premium
+  tierId: varchar("tier_id").references(() => membershipTiers.id), // null for free follow
+  type: varchar("type").default("follow"), // "follow", "member"
+  billingPeriod: varchar("billing_period").default("monthly"), // "monthly", "yearly"
   isActive: boolean("is_active").default(true),
+  // Payment integration
+  stripeSubscriptionId: varchar("stripe_subscription_id"),
+  stripeCustomerId: varchar("stripe_customer_id"),
+  currentPeriodStart: timestamp("current_period_start"),
+  currentPeriodEnd: timestamp("current_period_end"),
+  cancelAtPeriodEnd: boolean("cancel_at_period_end").default(false),
+  // Metadata
+  totalPaid: integer("total_paid").default(0), // total amount paid
+  giftedBy: varchar("gifted_by").references(() => users.id), // for gift memberships
+  giftMessage: text("gift_message"),
   startDate: timestamp("start_date").defaultNow(),
   endDate: timestamp("end_date"),
   createdAt: timestamp("created_at").defaultNow(),
-});
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("IDX_subscriptions_user_id").on(table.userId),
+  index("IDX_subscriptions_channel_id").on(table.channelId),
+  index("IDX_subscriptions_tier_id").on(table.tierId),
+  index("IDX_subscriptions_type").on(table.type),
+  index("IDX_subscriptions_active").on(table.isActive),
+  index("IDX_subscriptions_user_channel").on(table.userId, table.channelId),
+  index("IDX_subscriptions_stripe_id").on(table.stripeSubscriptionId),
+  unique("UQ_subscriptions_user_channel").on(table.userId, table.channelId),
+  check("CHK_subscriptions_type", sql`${table.type} IN ('follow', 'member')`),
+  check("CHK_subscriptions_billing", sql`${table.billingPeriod} IN ('monthly', 'yearly')`),
+]);
+
+// Subscription notification settings
+export const subscriptionSettings = pgTable("subscription_settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  subscriptionId: varchar("subscription_id").notNull().references(() => subscriptions.id),
+  newVideoNotifications: boolean("new_video_notifications").default(true),
+  liveStreamNotifications: boolean("live_stream_notifications").default(true),
+  communityPostNotifications: boolean("community_post_notifications").default(false),
+  memberPostNotifications: boolean("member_post_notifications").default(true), // member-only posts
+  emailNotifications: boolean("email_notifications").default(false),
+  pushNotifications: boolean("push_notifications").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("IDX_subscription_settings_subscription_id").on(table.subscriptionId),
+]);
+
+// Membership exclusive content
+export const memberContent = pgTable("member_content", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  channelId: varchar("channel_id").notNull().references(() => users.id),
+  tierId: varchar("tier_id").references(() => membershipTiers.id), // null = all members
+  type: varchar("type").notNull(), // "post", "video", "stream", "emoji", "badge"
+  title: varchar("title").notNull(),
+  content: text("content"),
+  imageUrl: varchar("image_url"),
+  videoId: varchar("video_id").references(() => videos.id),
+  streamId: varchar("stream_id").references(() => streams.id),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("IDX_member_content_channel_id").on(table.channelId),
+  index("IDX_member_content_tier_id").on(table.tierId),
+  index("IDX_member_content_type").on(table.type),
+  index("IDX_member_content_created_at").on(table.createdAt),
+  check("CHK_member_content_type", 
+    sql`${table.type} IN ('post', 'video', 'stream', 'emoji', 'badge')`),
+]);
 
 // Relations
 export const usersRelations = relations(users, ({ many, one }) => ({
@@ -298,6 +399,21 @@ export const usersRelations = relations(users, ({ many, one }) => ({
   followers: many(follows, { relationName: "following" }),
   following: many(follows, { relationName: "follower" }),
   creatorSettings: one(creatorSettings),
+  // Membership relations
+  membershipTiers: many(membershipTiers),
+  memberContent: many(memberContent),
+  giftedSubscriptions: many(subscriptions, { relationName: "gifter" }),
+}));
+
+export const membershipTiersRelations = relations(membershipTiers, ({ one, many }) => ({
+  channel: one(users, { fields: [membershipTiers.channelId], references: [users.id] }),
+  benefits: many(membershipBenefits),
+  subscriptions: many(subscriptions),
+  memberContent: many(memberContent),
+}));
+
+export const membershipBenefitsRelations = relations(membershipBenefits, ({ one }) => ({
+  tier: one(membershipTiers, { fields: [membershipBenefits.tierId], references: [membershipTiers.id] }),
 }));
 
 export const videosRelations = relations(videos, ({ one, many }) => ({
@@ -361,6 +477,20 @@ export const creatorSettingsRelations = relations(creatorSettings, ({ one }) => 
 export const subscriptionsRelations = relations(subscriptions, ({ one }) => ({
   user: one(users, { fields: [subscriptions.userId], references: [users.id], relationName: "subscriber" }),
   channel: one(users, { fields: [subscriptions.channelId], references: [users.id], relationName: "channel" }),
+  tier: one(membershipTiers, { fields: [subscriptions.tierId], references: [membershipTiers.id] }),
+  settings: one(subscriptionSettings),
+  gifter: one(users, { fields: [subscriptions.giftedBy], references: [users.id], relationName: "gifter" }),
+}));
+
+export const subscriptionSettingsRelations = relations(subscriptionSettings, ({ one }) => ({
+  subscription: one(subscriptions, { fields: [subscriptionSettings.subscriptionId], references: [subscriptions.id] }),
+}));
+
+export const memberContentRelations = relations(memberContent, ({ one }) => ({
+  channel: one(users, { fields: [memberContent.channelId], references: [users.id] }),
+  tier: one(membershipTiers, { fields: [memberContent.tierId], references: [membershipTiers.id] }),
+  video: one(videos, { fields: [memberContent.videoId], references: [videos.id] }),
+  stream: one(streams, { fields: [memberContent.streamId], references: [streams.id] }),
 }));
 
 // Insert schemas
@@ -438,9 +568,35 @@ export const insertCreatorSettingsSchema = createInsertSchema(creatorSettings).o
   updatedAt: true,
 });
 
+// Membership schemas
+export const insertMembershipTierSchema = createInsertSchema(membershipTiers).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertMembershipBenefitSchema = createInsertSchema(membershipBenefits).omit({
+  id: true,
+  createdAt: true,
+});
+
 export const insertSubscriptionSchema = createInsertSchema(subscriptions).omit({
   id: true,
   createdAt: true,
+  updatedAt: true,
+  totalPaid: true,
+});
+
+export const insertSubscriptionSettingsSchema = createInsertSchema(subscriptionSettings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertMemberContentSchema = createInsertSchema(memberContent).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
 });
 
 // Login schemas
@@ -491,6 +647,14 @@ export type InsertCreatorSettings = z.infer<typeof insertCreatorSettingsSchema>;
 export type CreatorSettings = typeof creatorSettings.$inferSelect;
 export type InsertSubscription = z.infer<typeof insertSubscriptionSchema>;
 export type Subscription = typeof subscriptions.$inferSelect;
+export type InsertMembershipTier = z.infer<typeof insertMembershipTierSchema>;
+export type MembershipTier = typeof membershipTiers.$inferSelect;
+export type InsertMembershipBenefit = z.infer<typeof insertMembershipBenefitSchema>;
+export type MembershipBenefit = typeof membershipBenefits.$inferSelect;
+export type InsertSubscriptionSettings = z.infer<typeof insertSubscriptionSettingsSchema>;
+export type SubscriptionSettings = typeof subscriptionSettings.$inferSelect;
+export type InsertMemberContent = z.infer<typeof insertMemberContentSchema>;
+export type MemberContent = typeof memberContent.$inferSelect;
 
 // Playlists table for content management
 export const playlists = pgTable("playlists", {

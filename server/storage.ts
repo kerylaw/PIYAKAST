@@ -13,6 +13,10 @@ import {
   videoThumbnails,
   creatorSettings,
   copyrightReports,
+  membershipTiers,
+  membershipBenefits,
+  subscriptionSettings,
+  memberContent,
   type User,
   type UpsertUser,
   type Video,
@@ -41,6 +45,14 @@ import {
   type InsertSubscription,
   type CopyrightReport,
   type InsertCopyrightReport,
+  type MembershipTier,
+  type InsertMembershipTier,
+  type MembershipBenefit,
+  type InsertMembershipBenefit,
+  type SubscriptionSettings,
+  type InsertSubscriptionSettings,
+  type MemberContent,
+  type InsertMemberContent,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, sql, count } from "drizzle-orm";
@@ -117,10 +129,42 @@ export interface IStorage {
   getCreatorSettings(userId: string): Promise<CreatorSettings | undefined>;
   updateCreatorSettings(userId: string, settings: Partial<CreatorSettings>): Promise<CreatorSettings>;
   
-  // Subscription operations
+  // Subscription operations (enhanced)
   createSubscription(subscription: InsertSubscription): Promise<Subscription>;
   getSubscription(userId: string, channelId: string): Promise<Subscription | undefined>;
+  updateSubscription(id: string, updates: Partial<Subscription>): Promise<Subscription>;
   cancelSubscription(userId: string, channelId: string): Promise<void>;
+  getSubscriptionsByUser(userId: string): Promise<any[]>;
+  getSubscribersByChannel(channelId: string): Promise<any[]>;
+  
+  // Membership tier operations
+  createMembershipTier(tier: InsertMembershipTier): Promise<MembershipTier>;
+  getMembershipTiers(channelId: string): Promise<MembershipTier[]>;
+  getMembershipTier(id: string): Promise<MembershipTier | undefined>;
+  updateMembershipTier(id: string, updates: Partial<MembershipTier>): Promise<MembershipTier>;
+  deleteMembershipTier(id: string): Promise<void>;
+  
+  // Membership benefit operations
+  createMembershipBenefit(benefit: InsertMembershipBenefit): Promise<MembershipBenefit>;
+  getMembershipBenefits(tierId: string): Promise<MembershipBenefit[]>;
+  updateMembershipBenefit(id: string, updates: Partial<MembershipBenefit>): Promise<MembershipBenefit>;
+  deleteMembershipBenefit(id: string): Promise<void>;
+  
+  // Subscription settings operations
+  createSubscriptionSettings(settings: InsertSubscriptionSettings): Promise<SubscriptionSettings>;
+  getSubscriptionSettings(subscriptionId: string): Promise<SubscriptionSettings | undefined>;
+  updateSubscriptionSettings(subscriptionId: string, updates: Partial<SubscriptionSettings>): Promise<SubscriptionSettings>;
+  
+  // Member content operations
+  createMemberContent(content: InsertMemberContent): Promise<MemberContent>;
+  getMemberContent(channelId: string, tierId?: string): Promise<MemberContent[]>;
+  updateMemberContent(id: string, updates: Partial<MemberContent>): Promise<MemberContent>;
+  deleteMemberContent(id: string): Promise<void>;
+  
+  // Membership utility operations
+  getUserMembership(userId: string, channelId: string): Promise<any>;
+  checkMembershipAccess(userId: string, contentId: string): Promise<boolean>;
+  getChannelRevenue(channelId: string, startDate?: Date, endDate?: Date): Promise<any>;
 
   // Copyright report operations
   createCopyrightReport(report: InsertCopyrightReport): Promise<CopyrightReport>;
@@ -712,6 +756,15 @@ export class DatabaseStorage implements IStorage {
     return subscription;
   }
 
+  async updateSubscription(id: string, updates: Partial<Subscription>): Promise<Subscription> {
+    const [updated] = await db
+      .update(subscriptions)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(subscriptions.id, id))
+      .returning();
+    return updated;
+  }
+
   async cancelSubscription(userId: string, channelId: string): Promise<void> {
     await db
       .update(subscriptions)
@@ -720,6 +773,285 @@ export class DatabaseStorage implements IStorage {
         eq(subscriptions.userId, userId),
         eq(subscriptions.channelId, channelId)
       ));
+  }
+
+  async getSubscriptionsByUser(userId: string): Promise<any[]> {
+    return await db
+      .select({
+        id: subscriptions.id,
+        channelId: subscriptions.channelId,
+        type: subscriptions.type,
+        tier: {
+          id: membershipTiers.id,
+          name: membershipTiers.name,
+          color: membershipTiers.color,
+          emoji: membershipTiers.emoji,
+          monthlyPrice: membershipTiers.monthlyPrice,
+        },
+        channel: {
+          id: users.id,
+          username: users.username,
+          profileImageUrl: users.profileImageUrl,
+          firstName: users.firstName,
+          lastName: users.lastName,
+        },
+        isActive: subscriptions.isActive,
+        startDate: subscriptions.startDate,
+        endDate: subscriptions.endDate,
+        currentPeriodEnd: subscriptions.currentPeriodEnd,
+        cancelAtPeriodEnd: subscriptions.cancelAtPeriodEnd,
+      })
+      .from(subscriptions)
+      .leftJoin(users, eq(subscriptions.channelId, users.id))
+      .leftJoin(membershipTiers, eq(subscriptions.tierId, membershipTiers.id))
+      .where(eq(subscriptions.userId, userId))
+      .orderBy(desc(subscriptions.createdAt));
+  }
+
+  async getSubscribersByChannel(channelId: string): Promise<any[]> {
+    return await db
+      .select({
+        id: subscriptions.id,
+        user: {
+          id: users.id,
+          username: users.username,
+          profileImageUrl: users.profileImageUrl,
+          firstName: users.firstName,
+          lastName: users.lastName,
+        },
+        type: subscriptions.type,
+        tier: {
+          id: membershipTiers.id,
+          name: membershipTiers.name,
+          color: membershipTiers.color,
+          emoji: membershipTiers.emoji,
+        },
+        isActive: subscriptions.isActive,
+        startDate: subscriptions.startDate,
+        totalPaid: subscriptions.totalPaid,
+      })
+      .from(subscriptions)
+      .leftJoin(users, eq(subscriptions.userId, users.id))
+      .leftJoin(membershipTiers, eq(subscriptions.tierId, membershipTiers.id))
+      .where(and(
+        eq(subscriptions.channelId, channelId),
+        eq(subscriptions.isActive, true)
+      ))
+      .orderBy(desc(subscriptions.createdAt));
+  }
+
+  // Membership tier operations
+  async createMembershipTier(tier: InsertMembershipTier): Promise<MembershipTier> {
+    const [created] = await db.insert(membershipTiers).values(tier).returning();
+    return created;
+  }
+
+  async getMembershipTiers(channelId: string): Promise<MembershipTier[]> {
+    return await db
+      .select()
+      .from(membershipTiers)
+      .where(and(
+        eq(membershipTiers.channelId, channelId),
+        eq(membershipTiers.isActive, true)
+      ))
+      .orderBy(membershipTiers.sortOrder, membershipTiers.monthlyPrice);
+  }
+
+  async getMembershipTier(id: string): Promise<MembershipTier | undefined> {
+    const [tier] = await db
+      .select()
+      .from(membershipTiers)
+      .where(eq(membershipTiers.id, id));
+    return tier;
+  }
+
+  async updateMembershipTier(id: string, updates: Partial<MembershipTier>): Promise<MembershipTier> {
+    const [updated] = await db
+      .update(membershipTiers)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(membershipTiers.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteMembershipTier(id: string): Promise<void> {
+    await db.delete(membershipTiers).where(eq(membershipTiers.id, id));
+  }
+
+  // Membership benefit operations
+  async createMembershipBenefit(benefit: InsertMembershipBenefit): Promise<MembershipBenefit> {
+    const [created] = await db.insert(membershipBenefits).values(benefit).returning();
+    return created;
+  }
+
+  async getMembershipBenefits(tierId: string): Promise<MembershipBenefit[]> {
+    return await db
+      .select()
+      .from(membershipBenefits)
+      .where(and(
+        eq(membershipBenefits.tierId, tierId),
+        eq(membershipBenefits.isActive, true)
+      ));
+  }
+
+  async updateMembershipBenefit(id: string, updates: Partial<MembershipBenefit>): Promise<MembershipBenefit> {
+    const [updated] = await db
+      .update(membershipBenefits)
+      .set(updates)
+      .where(eq(membershipBenefits.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteMembershipBenefit(id: string): Promise<void> {
+    await db.delete(membershipBenefits).where(eq(membershipBenefits.id, id));
+  }
+
+  // Subscription settings operations
+  async createSubscriptionSettings(settings: InsertSubscriptionSettings): Promise<SubscriptionSettings> {
+    const [created] = await db.insert(subscriptionSettings).values(settings).returning();
+    return created;
+  }
+
+  async getSubscriptionSettings(subscriptionId: string): Promise<SubscriptionSettings | undefined> {
+    const [settings] = await db
+      .select()
+      .from(subscriptionSettings)
+      .where(eq(subscriptionSettings.subscriptionId, subscriptionId));
+    return settings;
+  }
+
+  async updateSubscriptionSettings(subscriptionId: string, updates: Partial<SubscriptionSettings>): Promise<SubscriptionSettings> {
+    const [updated] = await db
+      .update(subscriptionSettings)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(subscriptionSettings.subscriptionId, subscriptionId))
+      .returning();
+    return updated;
+  }
+
+  // Member content operations
+  async createMemberContent(content: InsertMemberContent): Promise<MemberContent> {
+    const [created] = await db.insert(memberContent).values(content).returning();
+    return created;
+  }
+
+  async getMemberContent(channelId: string, tierId?: string): Promise<MemberContent[]> {
+    const conditions = [eq(memberContent.channelId, channelId), eq(memberContent.isActive, true)];
+    if (tierId) {
+      conditions.push(eq(memberContent.tierId, tierId));
+    }
+    
+    return await db
+      .select()
+      .from(memberContent)
+      .where(and(...conditions))
+      .orderBy(desc(memberContent.createdAt));
+  }
+
+  async updateMemberContent(id: string, updates: Partial<MemberContent>): Promise<MemberContent> {
+    const [updated] = await db
+      .update(memberContent)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(memberContent.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteMemberContent(id: string): Promise<void> {
+    await db.delete(memberContent).where(eq(memberContent.id, id));
+  }
+
+  // Membership utility operations
+  async getUserMembership(userId: string, channelId: string): Promise<any> {
+    const [result] = await db
+      .select({
+        subscription: {
+          id: subscriptions.id,
+          type: subscriptions.type,
+          isActive: subscriptions.isActive,
+          currentPeriodEnd: subscriptions.currentPeriodEnd,
+          cancelAtPeriodEnd: subscriptions.cancelAtPeriodEnd,
+          totalPaid: subscriptions.totalPaid,
+          giftedBy: subscriptions.giftedBy,
+        },
+        tier: {
+          id: membershipTiers.id,
+          name: membershipTiers.name,
+          color: membershipTiers.color,
+          emoji: membershipTiers.emoji,
+          monthlyPrice: membershipTiers.monthlyPrice,
+        },
+        channel: {
+          id: users.id,
+          username: users.username,
+          profileImageUrl: users.profileImageUrl,
+        }
+      })
+      .from(subscriptions)
+      .leftJoin(membershipTiers, eq(subscriptions.tierId, membershipTiers.id))
+      .leftJoin(users, eq(subscriptions.channelId, users.id))
+      .where(and(
+        eq(subscriptions.userId, userId),
+        eq(subscriptions.channelId, channelId),
+        eq(subscriptions.isActive, true)
+      ));
+    
+    return result;
+  }
+
+  async checkMembershipAccess(userId: string, contentId: string): Promise<boolean> {
+    // Get the member content details
+    const [content] = await db
+      .select({
+        channelId: memberContent.channelId,
+        tierId: memberContent.tierId,
+      })
+      .from(memberContent)
+      .where(eq(memberContent.id, contentId));
+    
+    if (!content) return false;
+    
+    // Check if user has active subscription to this channel
+    const [subscription] = await db
+      .select()
+      .from(subscriptions)
+      .where(and(
+        eq(subscriptions.userId, userId),
+        eq(subscriptions.channelId, content.channelId),
+        eq(subscriptions.isActive, true)
+      ));
+    
+    if (!subscription) return false;
+    
+    // If content requires specific tier, check if user has that tier or higher
+    if (content.tierId && subscription.tierId !== content.tierId) {
+      // TODO: Implement tier hierarchy check
+      return false;
+    }
+    
+    return true;
+  }
+
+  async getChannelRevenue(channelId: string, startDate?: Date, endDate?: Date): Promise<any> {
+    const conditions = [eq(subscriptions.channelId, channelId)];
+    if (startDate) {
+      conditions.push(sql`${subscriptions.startDate} >= ${startDate}`);
+    }
+    if (endDate) {
+      conditions.push(sql`${subscriptions.startDate} <= ${endDate}`);
+    }
+    
+    const [result] = await db
+      .select({
+        totalRevenue: sql<number>`COALESCE(SUM(${subscriptions.totalPaid}), 0)`,
+        activeSubscriptions: sql<number>`COUNT(CASE WHEN ${subscriptions.isActive} = true THEN 1 END)`,
+        totalSubscriptions: sql<number>`COUNT(*)`,
+      })
+      .from(subscriptions)
+      .where(and(...conditions));
+    
+    return result;
   }
 
   // Copyright report operations
