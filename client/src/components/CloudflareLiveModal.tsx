@@ -63,7 +63,12 @@ export default function CloudflareLiveModal({ isOpen, onClose }: CloudflareLiveM
       
       let errorMessage = "Cloudflare Stream 생성에 실패했습니다.";
       
-      if (error.message.includes("Cloudflare Stream service is not enabled")) {
+      if (error.message.includes("401: Unauthorized")) {
+        errorMessage = "로그인이 필요합니다. 다시 로그인해주세요.";
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 2000);
+      } else if (error.message.includes("Cloudflare Stream service is not enabled")) {
         errorMessage = "Cloudflare Stream 서비스가 활성화되지 않았습니다. 계정에서 Stream 서비스를 활성화해주세요.";
       } else if (error.message.includes("API credentials not configured")) {
         errorMessage = "Cloudflare API 자격 증명이 설정되지 않았습니다.";
