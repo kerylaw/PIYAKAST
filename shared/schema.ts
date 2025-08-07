@@ -37,6 +37,11 @@ export const users = pgTable("users", {
   provider: varchar("provider").default("email"), // email, google, kakao, naver
   providerId: varchar("provider_id"), // OAuth provider ID
   isEmailVerified: boolean("is_email_verified").default(false),
+  // Ban/suspend management
+  isBanned: boolean("is_banned").default(false),
+  bannedUntil: timestamp("banned_until"),
+  banReason: text("ban_reason"),
+  isSuspended: boolean("is_suspended").default(false),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
