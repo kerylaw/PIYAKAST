@@ -235,6 +235,7 @@ export function setupAuth(app: Express) {
           lastName: user.lastName,
           username: user.username,
           profileImageUrl: user.profileImageUrl,
+          role: user.role,
         });
       });
     } catch (error) {
@@ -263,6 +264,7 @@ export function setupAuth(app: Express) {
             lastName: user.lastName,
             username: user.username,
             profileImageUrl: user.profileImageUrl,
+            role: user.role,
           });
         });
       })(req, res, next);
@@ -329,6 +331,7 @@ export function setupAuth(app: Express) {
       lastName: req.user.lastName,
       username: req.user.username,
       profileImageUrl: req.user.profileImageUrl,
+      role: req.user.role,
     });
   });
 }
