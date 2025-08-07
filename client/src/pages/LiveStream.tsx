@@ -64,6 +64,7 @@ export default function LiveStream() {
           peertubeEmbedUrl={stream.peertubeEmbedUrl}
           rtmpUrl={stream.rtmpUrl}
           streamKey={stream.streamKey}
+          streamerId={stream.userId}
         />
       </div>
     </Layout>

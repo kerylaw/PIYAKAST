@@ -253,8 +253,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let streamData: any = {
         ...req.body,
         userId,
-        isLive: true, // 스트림 생성 시 바로 라이브 상태로 설정
-        startedAt: new Date(),
+        isLive: false, // 스트림 생성 시에는 준비 상태, 실제 방송 시작 시 true로 변경
         viewerCount: 0,
       };
 
@@ -310,6 +309,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error creating stream:", error);
       res.status(500).json({ message: "Failed to create stream" });
+    }
+  });
+
+  // Start live stream
+  app.post('/api/streams/:id/start', requireAuth, async (req: any, res) => {
+    try {
+      const streamId = req.params.id;
+      const userId = req.user.id;
+      
+      const stream = await storage.getStream(streamId);
+      if (!stream) {
+        return res.status(404).json({ message: "Stream not found" });
+      }
+      
+      if (stream.userId !== userId) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+      
+      await storage.updateStreamStatus(streamId, true, 0);
+      res.json({ message: "Stream started" });
+    } catch (error) {
+      console.error("Error starting stream:", error);
+      res.status(500).json({ message: "Failed to start stream" });
+    }
+  });
+
+  // Stop live stream
+  app.post('/api/streams/:id/stop', requireAuth, async (req: any, res) => {
+    try {
+      const streamId = req.params.id;
+      const userId = req.user.id;
+      
+      const stream = await storage.getStream(streamId);
+      if (!stream) {
+        return res.status(404).json({ message: "Stream not found" });
+      }
+      
+      if (stream.userId !== userId) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+      
+      await storage.updateStreamStatus(streamId, false);
+      res.json({ message: "Stream stopped" });
+    } catch (error) {
+      console.error("Error stopping stream:", error);
+      res.status(500).json({ message: "Failed to stop stream" });
     }
   });
 

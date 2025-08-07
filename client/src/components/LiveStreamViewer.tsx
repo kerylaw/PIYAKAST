@@ -6,6 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Users, Heart, Share, Send } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { StreamControls } from "./StreamControls";
 // Removed Agora SDK - using PeerTube embed player instead
 
 interface LiveStreamViewerProps {
@@ -21,6 +22,7 @@ interface LiveStreamViewerProps {
   peertubeEmbedUrl?: string;
   rtmpUrl?: string;
   streamKey?: string;
+  streamerId?: string;
 }
 
 interface ChatMessage {
@@ -47,12 +49,16 @@ export default function LiveStreamViewer({
   peertubeEmbedUrl,
   rtmpUrl,
   streamKey,
+  streamerId,
 }: LiveStreamViewerProps) {
   const { toast } = useToast();
   const { user, isAuthenticated } = useAuth();
   const [chatMessage, setChatMessage] = useState("");
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [isFollowed, setIsFollowed] = useState(false);
+  
+  // Check if current user is the stream owner
+  const isOwner = user && streamerId ? (user.id === streamerId) : false;
   const [currentViewerCount, setCurrentViewerCount] = useState(viewerCount);
 
   const videoRef = useRef<HTMLDivElement>(null);
@@ -204,18 +210,25 @@ export default function LiveStreamViewer({
                   {category}
                 </span>
               )}
-              <div className="flex items-center space-x-4">
-                <div className="flex items-center space-x-2">
-                  <Avatar className="w-8 h-8">
-                    <AvatarImage src={streamerAvatar} alt={streamerName} />
-                    <AvatarFallback>{streamerName.charAt(0)}</AvatarFallback>
-                  </Avatar>
-                  <span className="font-medium">{streamerName}</span>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                  <div className="flex items-center space-x-2">
+                    <Avatar className="w-8 h-8">
+                      <AvatarImage src={streamerAvatar} alt={streamerName} />
+                      <AvatarFallback>{streamerName.charAt(0)}</AvatarFallback>
+                    </Avatar>
+                    <span className="font-medium">{streamerName}</span>
+                  </div>
+                  <div className="flex items-center text-gray-600 dark:text-gray-400">
+                    <Users className="w-4 h-4 mr-1" />
+                    {currentViewerCount} watching
+                  </div>
                 </div>
-                <div className="flex items-center text-gray-600 dark:text-gray-400">
-                  <Users className="w-4 h-4 mr-1" />
-                  {currentViewerCount} watching
-                </div>
+                <StreamControls 
+                  streamId={streamId} 
+                  isLive={isLive} 
+                  isOwner={isOwner} 
+                />
               </div>
             </div>
 
