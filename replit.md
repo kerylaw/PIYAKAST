@@ -15,6 +15,9 @@ The application is built as a full-stack web platform with modern technologies, 
   - TypeScript 에러 수정 (passport-kakao 타입 이슈 해결)
   - 스트림 생성 테스트 성공 (여러 브라우저에서 확인)
   - PeerTube 연결 실패 시 로컬 저장소 폴백 정상 작동
+  - 라이브 스트림 표시 문제 해결 (isLive=true로 자동 설정, 다른 브라우저에서 표시 확인)
+  - LiveStream 페이지를 Cloudflare에서 PeerTube 전용으로 완전 전환
+  - PeerTube embed iframe 플레이어 또는 RTMP 스트리밍 정보 표시
 
 ✓ **Agora SDK 완전 제거 및 UI 개선 (2025-01-07)**:
   - Agora SDK 패키지 및 관련 코드 완전 삭제

@@ -2,14 +2,13 @@ import { useParams } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import Layout from "@/components/Layout";
 import LiveStreamViewer from "@/components/LiveStreamViewer";
-import CloudflareStreamViewer from "@/components/CloudflareStreamViewer";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function LiveStream() {
   const { id } = useParams();
 
   // Fetch stream details
-  const { data: stream, isLoading } = useQuery({
+  const { data: stream, isLoading } = useQuery<any>({
     queryKey: ["/api/streams", id],
     enabled: !!id,
   });
@@ -52,12 +51,19 @@ export default function LiveStream() {
   return (
     <Layout>
       <div className="p-6">
-        <CloudflareStreamViewer
+        <LiveStreamViewer
           streamId={stream.id}
           title={stream.title}
+          description={stream.description}
+          category={stream.category}
           streamerName={stream.user?.username || "Unknown"}
           streamerAvatar={stream.user?.profileImageUrl}
           viewerCount={stream.viewerCount || 0}
+          isLive={stream.isLive}
+          startedAt={stream.startedAt}
+          peertubeEmbedUrl={stream.peertubeEmbedUrl}
+          rtmpUrl={stream.rtmpUrl}
+          streamKey={stream.streamKey}
         />
       </div>
     </Layout>

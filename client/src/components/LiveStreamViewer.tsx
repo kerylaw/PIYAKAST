@@ -11,9 +11,16 @@ import { useAuth } from "@/hooks/useAuth";
 interface LiveStreamViewerProps {
   streamId: string;
   title: string;
+  description?: string;
+  category?: string;
   streamerName: string;
   streamerAvatar?: string;
   viewerCount: number;
+  isLive: boolean;
+  startedAt?: string;
+  peertubeEmbedUrl?: string;
+  rtmpUrl?: string;
+  streamKey?: string;
 }
 
 interface ChatMessage {
@@ -30,9 +37,16 @@ interface ChatMessage {
 export default function LiveStreamViewer({
   streamId,
   title,
+  description,
+  category,
   streamerName,
   streamerAvatar,
   viewerCount,
+  isLive,
+  startedAt,
+  peertubeEmbedUrl,
+  rtmpUrl,
+  streamKey,
 }: LiveStreamViewerProps) {
   const { toast } = useToast();
   const { user, isAuthenticated } = useAuth();
@@ -147,13 +161,32 @@ export default function LiveStreamViewer({
             </div>
           </div>
 
-          {/* PeerTube stream placeholder */}
-          <div className="absolute inset-0 flex items-center justify-center bg-gray-900">
-            <div className="text-center text-white">
-              <div className="text-lg font-medium mb-2">🎥 Live Stream</div>
-              <p className="text-gray-400">PeerTube stream player will appear here</p>
+          {/* PeerTube stream embed */}
+          {peertubeEmbedUrl ? (
+            <iframe
+              src={peertubeEmbedUrl}
+              className="w-full h-full"
+              frameBorder="0"
+              allowFullScreen
+              title={`${streamerName}'s Live Stream`}
+            />
+          ) : (
+            <div className="absolute inset-0 flex items-center justify-center bg-gray-900">
+              <div className="text-center text-white">
+                <div className="text-lg font-medium mb-2">🎥 Live Stream</div>
+                <div className="space-y-2">
+                  <p className="text-gray-400">Stream not available via PeerTube embed</p>
+                  {rtmpUrl && streamKey && (
+                    <div className="text-sm text-gray-500 space-y-1">
+                      <p>Use streaming software (OBS Studio) with:</p>
+                      <p>RTMP URL: {rtmpUrl}</p>
+                      <p>Stream Key: {streamKey?.slice(0, 8)}...</p>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Stream Info */}
@@ -161,6 +194,14 @@ export default function LiveStreamViewer({
           <div className="flex items-start justify-between">
             <div className="flex-1">
               <h1 className="text-xl font-bold mb-2">{title}</h1>
+              {description && (
+                <p className="text-gray-600 dark:text-gray-400 mb-2">{description}</p>
+              )}
+              {category && (
+                <span className="inline-block px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-sm rounded-full mb-2">
+                  {category}
+                </span>
+              )}
               <div className="flex items-center space-x-4">
                 <div className="flex items-center space-x-2">
                   <Avatar className="w-8 h-8">
