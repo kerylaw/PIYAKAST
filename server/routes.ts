@@ -1262,6 +1262,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const averageSessionTime = await storage.getAverageSessionTime();
       const bounceRate = await storage.getBounceRate();
       
+      // Revenue analytics
+      const superchatRevenue = await storage.getSuperchatRevenue();
+      const platformFee = await storage.getPlatformFee();
+      const membershipRevenue = await storage.getMembershipRevenue();
+      const adsRevenue = await storage.getAdsRevenue();
+      
+      // Additional analytics for dashboard
+      const currentLiveViewers = await storage.getCurrentLiveViewers();
+      const serverUptime = await storage.getServerUptime();
+      const systemResources = await storage.getSystemResources();
+      
       res.json({
         totalUsers,
         activeUsers,
@@ -1283,11 +1294,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         likeRatio,
         dailyPageViews,
         averageSessionTime,
-        bounceRate
+        bounceRate,
+        superchatRevenue,
+        platformFee,
+        membershipRevenue,
+        adsRevenue,
+        currentLiveViewers,
+        serverUptime,
+        systemResources
       });
     } catch (error) {
       console.error('Error fetching admin stats:', error);
       res.status(500).json({ message: 'Failed to fetch admin stats' });
+    }
+  });
+
+  // Top creators endpoint
+  app.get('/api/admin/top-creators', requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const creators = await storage.getTopCreators(5);
+      res.json(creators);
+    } catch (error) {
+      console.error('Error fetching top creators:', error);
+      res.status(500).json({ message: 'Failed to fetch top creators' });
     }
   });
 

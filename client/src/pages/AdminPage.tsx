@@ -99,6 +99,18 @@ interface AdminStats {
   dailyPageViews: number;
   averageSessionTime: number;
   bounceRate: number;
+  superchatRevenue: number;
+  platformFee: number;
+  membershipRevenue: number;
+  adsRevenue: number;
+  currentLiveViewers: number;
+  serverUptime: number;
+  systemResources: {
+    cpu: number;
+    memory: number;
+    disk: number;
+    network: number;
+  };
 }
 
 interface AdminUser {
@@ -197,6 +209,18 @@ export default function AdminPage() {
   const { data: reports = [], isLoading: reportsLoading } = useQuery<AdminReport[]>({
     queryKey: ["/api/admin/reports", reportFilter],
     enabled: !!user && user.role === 'admin' && selectedTab === 'reports',
+  });
+
+  // TOP 크리에이터 목록 조회
+  const { data: topCreators = [] } = useQuery<any[]>({
+    queryKey: ["/api/admin/top-creators"],
+    enabled: !!user && user.role === 'admin' && selectedTab === 'analytics',
+  });
+
+  // 라이브 스트림 목록 조회
+  const { data: liveStreams = [] } = useQuery<any[]>({
+    queryKey: ["/api/streams/live"],
+    enabled: !!user && user.role === 'admin' && selectedTab === 'analytics',
   });
 
   // 사용자 상태 변경 뮤테이션
@@ -1125,7 +1149,7 @@ export default function AdminPage() {
                           <div className="flex items-center justify-between">
                             <div>
                               <p className="text-green-100 text-sm">월간 총 수익</p>
-                              <p className="text-2xl font-bold">₩18.5M</p>
+                              <p className="text-2xl font-bold">{formatCurrency(stats?.totalRevenue || 0)}</p>
                               <p className="text-green-200 text-xs">+24% 증가</p>
                             </div>
                             <DollarSign className="h-8 w-8 text-green-200" />
@@ -1137,7 +1161,7 @@ export default function AdminPage() {
                           <div className="flex items-center justify-between">
                             <div>
                               <p className="text-blue-100 text-sm">슈퍼챗 수익</p>
-                              <p className="text-2xl font-bold">₩8.2M</p>
+                              <p className="text-2xl font-bold">{formatCurrency(stats?.superchatRevenue || 0)}</p>
                               <p className="text-blue-200 text-xs">+42% 증가</p>
                             </div>
                             <MessageSquare className="h-8 w-8 text-blue-200" />
@@ -1149,7 +1173,7 @@ export default function AdminPage() {
                           <div className="flex items-center justify-between">
                             <div>
                               <p className="text-purple-100 text-sm">플랫폼 수수료</p>
-                              <p className="text-2xl font-bold">₩2.1M</p>
+                              <p className="text-2xl font-bold">{formatCurrency(stats?.membershipRevenue || 0)}</p>
                               <p className="text-purple-200 text-xs">+18% 증가</p>
                             </div>
                             <TrendingUp className="h-8 w-8 text-purple-200" />
@@ -1169,36 +1193,36 @@ export default function AdminPage() {
                               <span className="text-gray-300">슈퍼챗</span>
                               <div className="flex items-center space-x-2">
                                 <div className="w-32 bg-gray-700 rounded-full h-3">
-                                  <div className="bg-blue-500 h-3 rounded-full" style={{width: '44%'}}></div>
+                                  <div className="bg-blue-500 h-3 rounded-full" style={{width: `${stats?.totalRevenue ? Math.round((stats.superchatRevenue / stats.totalRevenue) * 100) : 0}%`}}></div>
                                 </div>
-                                <span className="text-blue-400 font-semibold">44%</span>
+                                <span className="text-blue-400 font-semibold">{stats?.totalRevenue ? Math.round((stats.superchatRevenue / stats.totalRevenue) * 100) : 0}%</span>
                               </div>
                             </div>
                             <div className="flex justify-between items-center">
                               <span className="text-gray-300">멤버십</span>
                               <div className="flex items-center space-x-2">
                                 <div className="w-32 bg-gray-700 rounded-full h-3">
-                                  <div className="bg-green-500 h-3 rounded-full" style={{width: '28%'}}></div>
+                                  <div className="bg-green-500 h-3 rounded-full" style={{width: `${stats?.totalRevenue ? Math.round((stats.membershipRevenue / stats.totalRevenue) * 100) : 0}%`}}></div>
                                 </div>
-                                <span className="text-green-400 font-semibold">28%</span>
+                                <span className="text-green-400 font-semibold">{stats?.totalRevenue ? Math.round((stats.membershipRevenue / stats.totalRevenue) * 100) : 0}%</span>
                               </div>
                             </div>
                             <div className="flex justify-between items-center">
                               <span className="text-gray-300">광고 수익</span>
                               <div className="flex items-center space-x-2">
                                 <div className="w-32 bg-gray-700 rounded-full h-3">
-                                  <div className="bg-yellow-500 h-3 rounded-full" style={{width: '17%'}}></div>
+                                  <div className="bg-yellow-500 h-3 rounded-full" style={{width: `${stats?.totalRevenue ? Math.round((stats.adsRevenue / stats.totalRevenue) * 100) : 0}%`}}></div>
                                 </div>
-                                <span className="text-yellow-400 font-semibold">17%</span>
+                                <span className="text-yellow-400 font-semibold">{stats?.totalRevenue ? Math.round((stats.adsRevenue / stats.totalRevenue) * 100) : 0}%</span>
                               </div>
                             </div>
                             <div className="flex justify-between items-center">
                               <span className="text-gray-300">기타</span>
                               <div className="flex items-center space-x-2">
                                 <div className="w-32 bg-gray-700 rounded-full h-3">
-                                  <div className="bg-purple-500 h-3 rounded-full" style={{width: '11%'}}></div>
+                                  <div className="bg-purple-500 h-3 rounded-full" style={{width: `${stats?.totalRevenue ? Math.round((stats.platformFee / stats.totalRevenue) * 100) : 0}%`}}></div>
                                 </div>
-                                <span className="text-purple-400 font-semibold">11%</span>
+                                <span className="text-purple-400 font-semibold">{stats?.totalRevenue ? Math.round((stats.platformFee / stats.totalRevenue) * 100) : 0}%</span>
                               </div>
                             </div>
                           </div>
@@ -1210,33 +1234,27 @@ export default function AdminPage() {
                         </CardHeader>
                         <CardContent>
                           <div className="space-y-3">
-                            <div className="flex items-center justify-between p-2 bg-gray-800 rounded">
-                              <div className="flex items-center space-x-2">
-                                <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center">
-                                  <span className="text-white text-sm font-bold">1</span>
+                            {topCreators.length > 0 ? (
+                              topCreators.map((creator: any, index: number) => (
+                                <div key={creator.userId} className="flex items-center justify-between p-2 bg-gray-800 rounded">
+                                  <div className="flex items-center space-x-2">
+                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                                      index === 0 ? 'bg-purple-600' : 
+                                      index === 1 ? 'bg-gray-600' : 
+                                      'bg-amber-600'
+                                    }`}>
+                                      <span className="text-white text-sm font-bold">{index + 1}</span>
+                                    </div>
+                                    <span className="text-white font-medium">{creator.username}</span>
+                                  </div>
+                                  <span className="text-green-400 font-semibold">{formatCurrency(creator.totalRevenue)}</span>
                                 </div>
-                                <span className="text-white font-medium">크리에이터A</span>
+                              ))
+                            ) : (
+                              <div className="text-center text-gray-400 py-8">
+                                수익 데이터가 없습니다
                               </div>
-                              <span className="text-green-400 font-semibold">₩2.4M</span>
-                            </div>
-                            <div className="flex items-center justify-between p-2 bg-gray-800 rounded">
-                              <div className="flex items-center space-x-2">
-                                <div className="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center">
-                                  <span className="text-white text-sm font-bold">2</span>
-                                </div>
-                                <span className="text-white font-medium">크리에이터B</span>
-                              </div>
-                              <span className="text-green-400 font-semibold">₩1.8M</span>
-                            </div>
-                            <div className="flex items-center justify-between p-2 bg-gray-800 rounded">
-                              <div className="flex items-center space-x-2">
-                                <div className="w-8 h-8 bg-amber-600 rounded-full flex items-center justify-center">
-                                  <span className="text-white text-sm font-bold">3</span>
-                                </div>
-                                <span className="text-white font-medium">크리에이터C</span>
-                              </div>
-                              <span className="text-green-400 font-semibold">₩1.2M</span>
-                            </div>
+                            )}
                           </div>
                         </CardContent>
                       </Card>
@@ -1397,7 +1415,7 @@ export default function AdminPage() {
                           <div className="flex items-center justify-between">
                             <div>
                               <p className="text-yellow-100 text-sm">시청 중 사용자</p>
-                              <p className="text-2xl font-bold">856</p>
+                              <p className="text-2xl font-bold">{formatNumber(stats?.currentLiveViewers || 0)}</p>
                               <p className="text-yellow-200 text-xs">라이브 시청자</p>
                             </div>
                             <Eye className="h-8 w-8 text-yellow-200" />
@@ -1409,7 +1427,7 @@ export default function AdminPage() {
                           <div className="flex items-center justify-between">
                             <div>
                               <p className="text-pink-100 text-sm">서버 상태</p>
-                              <p className="text-2xl font-bold">99.8%</p>
+                              <p className="text-2xl font-bold">{stats?.serverUptime || 99.0}%</p>
                               <p className="text-pink-200 text-xs">가동률</p>
                             </div>
                             <CheckCircle className="h-8 w-8 text-pink-200" />
@@ -1425,34 +1443,21 @@ export default function AdminPage() {
                         </CardHeader>
                         <CardContent>
                           <div className="space-y-3 max-h-64 overflow-y-auto">
-                            <div className="flex items-center justify-between p-2 bg-gray-800 rounded">
-                              <div className="flex items-center space-x-2">
-                                <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
-                                <span className="text-white font-medium">K-Pop 댄스 커버</span>
+                            {liveStreams.length > 0 ? (
+                              liveStreams.slice(0, 4).map((stream: any) => (
+                                <div key={stream.id} className="flex items-center justify-between p-2 bg-gray-800 rounded">
+                                  <div className="flex items-center space-x-2">
+                                    <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
+                                    <span className="text-white font-medium">{stream.title}</span>
+                                  </div>
+                                  <span className="text-red-400 font-semibold">{stream.viewerCount}명 시청</span>
+                                </div>
+                              ))
+                            ) : (
+                              <div className="text-center text-gray-400 py-8">
+                                현재 라이브 스트림이 없습니다
                               </div>
-                              <span className="text-red-400 font-semibold">234명 시청</span>
-                            </div>
-                            <div className="flex items-center justify-between p-2 bg-gray-800 rounded">
-                              <div className="flex items-center space-x-2">
-                                <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
-                                <span className="text-white font-medium">게임 스트리밍</span>
-                              </div>
-                              <span className="text-red-400 font-semibold">187명 시청</span>
-                            </div>
-                            <div className="flex items-center justify-between p-2 bg-gray-800 rounded">
-                              <div className="flex items-center space-x-2">
-                                <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
-                                <span className="text-white font-medium">메이크업 튜토리얼</span>
-                              </div>
-                              <span className="text-red-400 font-semibold">156명 시청</span>
-                            </div>
-                            <div className="flex items-center justify-between p-2 bg-gray-800 rounded">
-                              <div className="flex items-center space-x-2">
-                                <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
-                                <span className="text-white font-medium">요리 방송</span>
-                              </div>
-                              <span className="text-red-400 font-semibold">98명 시청</span>
-                            </div>
+                            )}
                           </div>
                         </CardContent>
                       </Card>
@@ -1465,37 +1470,37 @@ export default function AdminPage() {
                             <div>
                               <div className="flex justify-between items-center mb-1">
                                 <span className="text-gray-300">CPU 사용률</span>
-                                <span className="text-purple-400 font-semibold">68%</span>
+                                <span className="text-purple-400 font-semibold">{stats?.systemResources?.cpu || 50}%</span>
                               </div>
                               <div className="w-full bg-gray-700 rounded-full h-2">
-                                <div className="bg-purple-500 h-2 rounded-full" style={{width: '68%'}}></div>
+                                <div className="bg-purple-500 h-2 rounded-full" style={{width: `${stats?.systemResources?.cpu || 50}%`}}></div>
                               </div>
                             </div>
                             <div>
                               <div className="flex justify-between items-center mb-1">
                                 <span className="text-gray-300">메모리 사용률</span>
-                                <span className="text-blue-400 font-semibold">45%</span>
+                                <span className="text-blue-400 font-semibold">{stats?.systemResources?.memory || 40}%</span>
                               </div>
                               <div className="w-full bg-gray-700 rounded-full h-2">
-                                <div className="bg-blue-500 h-2 rounded-full" style={{width: '45%'}}></div>
+                                <div className="bg-blue-500 h-2 rounded-full" style={{width: `${stats?.systemResources?.memory || 40}%`}}></div>
                               </div>
                             </div>
                             <div>
                               <div className="flex justify-between items-center mb-1">
                                 <span className="text-gray-300">디스크 사용률</span>
-                                <span className="text-green-400 font-semibold">32%</span>
+                                <span className="text-green-400 font-semibold">{stats?.systemResources?.disk || 30}%</span>
                               </div>
                               <div className="w-full bg-gray-700 rounded-full h-2">
-                                <div className="bg-green-500 h-2 rounded-full" style={{width: '32%'}}></div>
+                                <div className="bg-green-500 h-2 rounded-full" style={{width: `${stats?.systemResources?.disk || 30}%`}}></div>
                               </div>
                             </div>
                             <div>
                               <div className="flex justify-between items-center mb-1">
                                 <span className="text-gray-300">네트워크 대역폭</span>
-                                <span className="text-yellow-400 font-semibold">78%</span>
+                                <span className="text-yellow-400 font-semibold">{stats?.systemResources?.network || 60}%</span>
                               </div>
                               <div className="w-full bg-gray-700 rounded-full h-2">
-                                <div className="bg-yellow-500 h-2 rounded-full" style={{width: '78%'}}></div>
+                                <div className="bg-yellow-500 h-2 rounded-full" style={{width: `${stats?.systemResources?.network || 60}%`}}></div>
                               </div>
                             </div>
                           </div>
