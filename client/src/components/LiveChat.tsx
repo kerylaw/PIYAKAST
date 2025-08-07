@@ -73,6 +73,18 @@ export function LiveChat({ streamId, isCreator }: LiveChatProps) {
         streamId,
         userId: user.id,
       }));
+      
+      // Send heartbeat every 15 seconds to keep stream active
+      const heartbeatInterval = setInterval(() => {
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({
+            type: "heartbeat",
+            streamId
+          }));
+        } else {
+          clearInterval(heartbeatInterval);
+        }
+      }, 15000);
     };
 
     ws.onmessage = (event) => {

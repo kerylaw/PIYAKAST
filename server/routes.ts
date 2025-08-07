@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
+import { recordStreamHeartbeat, removeStream } from "./streamMonitor";
 import { setupAuth, requireAuth } from "./auth";
 import { 
   insertVideoSchema, 
@@ -598,6 +599,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
             if (currentStreamId) {
               streamConnections.get(currentStreamId)!.add(ws);
+              // Record heartbeat for stream activity
+              recordStreamHeartbeat(currentStreamId, streamConnections.get(currentStreamId)!.size);
             }
             
             // Send recent chat messages
@@ -614,6 +617,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
             break;
 
+          case 'heartbeat':
+            // Update heartbeat for current stream
+            if (currentStreamId) {
+              const viewerCount = streamConnections.get(currentStreamId)?.size || 0;
+              recordStreamHeartbeat(currentStreamId, viewerCount);
+            }
+            break;
+
           case 'chat_message':
             if (currentStreamId && data.userId && data.message) {
               try {
@@ -623,6 +634,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   userId: data.userId,
                   message: data.message,
                 });
+
+                // Record activity heartbeat
+                recordStreamHeartbeat(currentStreamId);
 
                 // Broadcast to all clients in the stream
                 const connections = streamConnections.get(currentStreamId);

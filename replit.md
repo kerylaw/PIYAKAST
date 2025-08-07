@@ -8,6 +8,13 @@ The application is built as a full-stack web platform with modern technologies, 
 
 ## Recent Changes (January 2025)
 
+✓ **실시간 스트림 모니터링 시스템 구현 (2025-08-07)**:
+  - WebSocket 기반 하트비트 시스템으로 실제 활성 스트림만 표시
+  - 30초 동안 비활성화된 스트림을 자동으로 오프라인 처리
+  - 클라이언트에서 15초마다 자동 하트비트 전송
+  - 서버에서 15초마다 스트림 상태 모니터링 및 정리
+  - "가짜" 라이브 스트림 문제 완전 해결 (실제로 시청되지 않는 스트림은 자동 숨김)
+
 ✓ **완전한 PeerTube 기반 스트리밍 시스템 완성 (2025-08-07)**:
   - 데이터베이스에 누락된 PeerTube 컬럼들 추가 (peertube_id, peertube_uuid, peertube_embed_url)
   - 로그아웃 기능 완전 수정 (POST 메서드로 변경, 정상 작동 확인)
