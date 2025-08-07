@@ -17,7 +17,7 @@ export default function Landing() {
               <span className="font-bold text-xl">StreamHub</span>
             </div>
             <Button
-              onClick={() => window.location.href = "/api/login"}
+              onClick={() => window.location.href = "/auth"}
               className="bg-primary-purple hover:bg-purple-700"
               data-testid="button-get-started"
             >
