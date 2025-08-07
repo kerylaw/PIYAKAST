@@ -8,6 +8,13 @@ The application is built as a full-stack web platform with modern technologies, 
 
 ## Recent Changes (January 2025)
 
+✓ **Node.js 호환성 확인 및 문서 업데이트 (2025-08-07)**:
+  - Node.js 18.20.8 완전 호환 확인 및 문서화
+  - 설치 가이드에 Node.js 18.x와 20.x 모두 지원 명시
+  - 프로덕션 환경에서 18.20.8 LTS 버전 사용 권장
+
+## Recent Changes (January 2025)
+
 ✓ **방송 중 네비게이션 시스템 구현 (2025-08-07)**:
   - 활성 스트림 감지 시 "Go Live" 버튼을 "Go Back" 버튼으로 자동 변경 (연한 파란색 배경)
   - 방송 중에도 사이트 모든 페이지 이동 가능 (방송 중단 없음)

@@ -23,9 +23,11 @@ StreamHub는 한국 콘텐츠에 특화된 라이브 스트리밍 및 VOD 플랫
 
 ### 소프트웨어 요구사항
 - Ubuntu 20.04 LTS 이상 (권장: 22.04 LTS)
-- Node.js 18+ (권장: 20.x)
+- Node.js 18.20.8+ (18.x 또는 20.x 모두 지원)
 - PostgreSQL 13+
 - Git
+
+**호환성**: Node.js 18.20.8은 완전히 지원되며 안정적입니다.
 
 ## 1. 기본 시스템 준비
 
@@ -41,7 +43,22 @@ sudo apt install -y curl wget git build-essential python3-pip
 
 ## 2. Node.js 설치
 
-### Node.js 20.x 설치 (권장)
+### Node.js 18.x 또는 20.x 설치
+
+#### Node.js 18.x 설치 (안정적, 권장)
+```bash
+# NodeSource repository 추가
+curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+
+# Node.js 설치
+sudo apt-get install -y nodejs
+
+# 설치 확인
+node --version  # v18.20.8 또는 상위 버전 확인
+npm --version   # 9.x.x 또는 10.x.x 확인
+```
+
+#### Node.js 20.x 설치 (최신, 선택사항)
 ```bash
 # NodeSource repository 추가
 curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
@@ -53,6 +70,8 @@ sudo apt-get install -y nodejs
 node --version  # v20.x.x 확인
 npm --version   # 10.x.x 확인
 ```
+
+**참고**: Node.js 18.20.8은 완전히 테스트되고 지원되는 버전입니다.
 
 ## 3. PostgreSQL 설치 및 설정
 
