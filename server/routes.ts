@@ -16,6 +16,7 @@ import {
   insertCommentLikeSchema,
   insertPaymentSchema,
   insertVideoThumbnailSchema,
+  insertCopyrightReportSchema,
   InsertCreatorSettings,
 } from "@shared/schema";
 import Stripe from "stripe";
@@ -530,6 +531,89 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error creating comment:", error);
       res.status(500).json({ message: "Failed to create comment" });
+    }
+  });
+
+  // Copyright report routes
+  app.post('/api/videos/:videoId/copyright-report', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const reportData = insertCopyrightReportSchema.parse({
+        reporterId: userId,
+        videoId: req.params.videoId,
+        claimType: req.body.claimType,
+        rightsOwnerType: req.body.rightsOwnerType,
+        copyrightOwner: req.body.copyrightOwner,
+        description: req.body.description,
+        evidence: req.body.evidence,
+        contactEmail: req.body.contactEmail,
+      });
+
+      const report = await storage.createCopyrightReport(reportData);
+      res.status(201).json({
+        message: "저작권 신고가 성공적으로 접수되었습니다.",
+        reportId: report.id
+      });
+    } catch (error) {
+      console.error("Error creating copyright report:", error);
+      res.status(500).json({ message: "Failed to create copyright report" });
+    }
+  });
+
+  app.get('/api/copyright/reports/user/:userId', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.params.userId;
+      const requestingUserId = req.user.id;
+      
+      // Only allow users to see their own reports
+      if (userId !== requestingUserId) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+      
+      const reports = await storage.getCopyrightReportsByUser(userId);
+      res.json(reports);
+    } catch (error) {
+      console.error("Error fetching copyright reports:", error);
+      res.status(500).json({ message: "Failed to fetch copyright reports" });
+    }
+  });
+
+  app.get('/api/videos/:videoId/copyright-reports', requireAuth, async (req: any, res) => {
+    try {
+      const videoId = req.params.videoId;
+      
+      // Get the video to check ownership
+      const video = await storage.getVideo(videoId);
+      if (!video) {
+        return res.status(404).json({ message: "Video not found" });
+      }
+      
+      // Only allow video owner to see reports on their video
+      if (video.userId !== req.user.id) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+      
+      const reports = await storage.getCopyrightReportsByVideo(videoId);
+      res.json(reports);
+    } catch (error) {
+      console.error("Error fetching video copyright reports:", error);
+      res.status(500).json({ message: "Failed to fetch video copyright reports" });
+    }
+  });
+
+  app.patch('/api/copyright/reports/:reportId/status', requireAuth, async (req: any, res) => {
+    try {
+      const { reportId } = req.params;
+      const { status, reviewerNotes } = req.body;
+      
+      // Only admin users should be able to update report status
+      // For now, we'll allow any authenticated user (implement proper admin check later)
+      
+      await storage.updateCopyrightReportStatus(reportId, status, reviewerNotes);
+      res.json({ message: "Report status updated successfully" });
+    } catch (error) {
+      console.error("Error updating copyright report status:", error);
+      res.status(500).json({ message: "Failed to update report status" });
     }
   });
 

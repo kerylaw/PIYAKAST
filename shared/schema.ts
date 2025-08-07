@@ -603,6 +603,25 @@ export const contentPerformance = pgTable("content_performance", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Copyright reports table (일반 사용자가 제출하는 저작권 신고)
+export const copyrightReports = pgTable("copyright_reports", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  reporterId: varchar("reporter_id").notNull().references(() => users.id), // 신고자
+  videoId: varchar("video_id").references(() => videos.id), // 신고된 동영상
+  streamId: varchar("stream_id").references(() => streams.id), // 신고된 스트림
+  claimType: varchar("claim_type").notNull(), // music, video, image, other
+  rightsOwnerType: varchar("rights_owner_type").notNull(), // myself, representative
+  copyrightOwner: text("copyright_owner").notNull(), // 저작권자 정보
+  description: text("description").notNull(), // 신고 사유
+  evidence: text("evidence"), // 증거 자료 (링크 등)
+  contactEmail: varchar("contact_email").notNull(), // 연락처
+  status: varchar("status").default("pending"), // pending, reviewed, approved, rejected
+  reviewedAt: timestamp("reviewed_at"),
+  reviewerNotes: text("reviewer_notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Insert schemas for new tables
 export const insertPlaylistSchema = createInsertSchema(playlists);
 export const insertPlaylistVideoSchema = createInsertSchema(playlistVideos);
@@ -611,6 +630,7 @@ export const insertViewSessionSchema = createInsertSchema(viewSessions);
 export const insertChannelSettingsSchema = createInsertSchema(channelSettings);
 export const insertRevenueReportSchema = createInsertSchema(revenueReports);
 export const insertContentPerformanceSchema = createInsertSchema(contentPerformance);
+export const insertCopyrightReportSchema = createInsertSchema(copyrightReports);
 
 // Types for new tables
 export type InsertPlaylist = z.infer<typeof insertPlaylistSchema>;
@@ -627,3 +647,5 @@ export type InsertRevenueReport = z.infer<typeof insertRevenueReportSchema>;
 export type RevenueReport = typeof revenueReports.$inferSelect;
 export type InsertContentPerformance = z.infer<typeof insertContentPerformanceSchema>;
 export type ContentPerformance = typeof contentPerformance.$inferSelect;
+export type InsertCopyrightReport = z.infer<typeof insertCopyrightReportSchema>;
+export type CopyrightReport = typeof copyrightReports.$inferSelect;

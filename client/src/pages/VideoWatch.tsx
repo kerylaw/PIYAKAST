@@ -1,12 +1,17 @@
 import { useState, useEffect } from "react";
 import { useParams, Link } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ThumbsUp, ThumbsDown, Share2, Flag, UserPlus } from "lucide-react";
+import { ThumbsUp, ThumbsDown, Share2, Flag, UserPlus, Shield, AlertTriangle } from "lucide-react";
 import Layout from "@/components/Layout";
 import VideoPlayer from "@/components/VideoPlayer";
 import VideoCard from "@/components/VideoCard";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/useAuth";
@@ -14,6 +19,20 @@ import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { apiRequest } from "@/lib/queryClient";
 import { formatDistanceToNow } from "date-fns";
+import { Video, Comment, User } from "@shared/schema";
+
+interface VideoWithUser extends Video {
+  user: User;
+}
+
+interface CommentWithUser extends Comment {
+  user: User;
+}
+
+interface VideoLikes {
+  likes: number;
+  dislikes: number;
+}
 
 export default function VideoWatch() {
   const { id } = useParams();
@@ -21,6 +40,15 @@ export default function VideoWatch() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [newComment, setNewComment] = useState("");
+  const [showCopyrightDialog, setShowCopyrightDialog] = useState(false);
+  const [copyrightForm, setCopyrightForm] = useState({
+    claimType: "",
+    rightsOwnerType: "",
+    copyrightOwner: "",
+    description: "",
+    evidence: "",
+    contactEmail: user?.email || "",
+  });
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -38,25 +66,25 @@ export default function VideoWatch() {
   }, [isAuthenticated, toast]);
 
   // Fetch video details
-  const { data: video, isLoading: videoLoading, error: videoError } = useQuery({
+  const { data: video, isLoading: videoLoading, error: videoError } = useQuery<VideoWithUser>({
     queryKey: ["/api/videos", id],
     enabled: !!id && isAuthenticated,
   });
 
   // Fetch video comments
-  const { data: comments = [], isLoading: commentsLoading } = useQuery({
+  const { data: comments = [], isLoading: commentsLoading } = useQuery<CommentWithUser[]>({
     queryKey: ["/api/videos", id, "comments"],
     enabled: !!id && isAuthenticated,
   });
 
   // Fetch video likes
-  const { data: likes } = useQuery({
+  const { data: likes } = useQuery<VideoLikes>({
     queryKey: ["/api/videos", id, "likes"],
     enabled: !!id && isAuthenticated,
   });
 
   // Fetch related videos
-  const { data: relatedVideos = [] } = useQuery({
+  const { data: relatedVideos = [] } = useQuery<VideoWithUser[]>({
     queryKey: ["/api/videos"],
     enabled: !!id && isAuthenticated,
   });
@@ -153,10 +181,66 @@ export default function VideoWatch() {
     },
   });
 
+  // Copyright report mutation
+  const copyrightReportMutation = useMutation({
+    mutationFn: async (reportData: any) => {
+      return await apiRequest("POST", `/api/videos/${id}/copyright-report`, reportData);
+    },
+    onSuccess: () => {
+      toast({
+        title: "저작권 신고 접수 완료",
+        description: "신고가 성공적으로 접수되었습니다. 검토 후 처리될 예정입니다.",
+      });
+      setShowCopyrightDialog(false);
+      setCopyrightForm({
+        claimType: "",
+        rightsOwnerType: "",
+        copyrightOwner: "",
+        description: "",
+        evidence: "",
+        contactEmail: user?.email || "",
+      });
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "신고 접수 실패",
+        description: "잠시 후 다시 시도해주세요.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleAddComment = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newComment.trim()) return;
     commentMutation.mutate(newComment);
+  };
+
+  const handleCopyrightReport = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!copyrightForm.claimType || !copyrightForm.rightsOwnerType || !copyrightForm.copyrightOwner.trim() || !copyrightForm.description.trim() || !copyrightForm.contactEmail.trim()) {
+      toast({
+        title: "필수 정보 누락",
+        description: "모든 필수 항목을 입력해주세요.",
+        variant: "destructive",
+      });
+      return;
+    }
+    copyrightReportMutation.mutate({
+      ...copyrightForm,
+      videoId: id,
+    });
   };
 
   const formatViewCount = (count: number): string => {
@@ -264,6 +348,21 @@ export default function VideoWatch() {
                         <Share2 className="h-4 w-4 mr-1" />
                         Share
                       </Button>
+                      {video?.userId !== user?.id && (
+                        <Dialog open={showCopyrightDialog} onOpenChange={setShowCopyrightDialog}>
+                          <DialogTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="border-gray-600 hover:bg-elevated text-orange-400 hover:text-orange-300"
+                              data-testid={`button-copyright-report-${video?.id}`}
+                            >
+                              <Flag className="h-4 w-4 mr-1" />
+                              신고
+                            </Button>
+                          </DialogTrigger>
+                        </Dialog>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -451,6 +550,138 @@ export default function VideoWatch() {
             </div>
           </div>
         </div>
+
+        {/* Copyright Report Dialog */}
+        <Dialog open={showCopyrightDialog} onOpenChange={setShowCopyrightDialog}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Shield className="h-5 w-5 text-orange-400" />
+                저작권 침해 신고
+              </DialogTitle>
+            </DialogHeader>
+            {video && (
+              <form onSubmit={handleCopyrightReport} className="space-y-6">
+                <div className="p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800">
+                  <div className="flex items-start gap-3">
+                    <AlertTriangle className="h-5 w-5 text-orange-500 mt-0.5" />
+                    <div>
+                      <h4 className="font-medium text-orange-800 dark:text-orange-200 mb-1">
+                        신고 대상 동영상
+                      </h4>
+                      <p className="text-sm text-orange-700 dark:text-orange-300">
+                        {video.title}
+                      </p>
+                      <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">
+                        업로더: {video.user?.username}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="claimType">침해 유형 *</Label>
+                  <Select value={copyrightForm.claimType} onValueChange={(value) => setCopyrightForm(prev => ({ ...prev, claimType: value }))}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="침해 유형을 선택하세요" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="music">음악</SelectItem>
+                      <SelectItem value="video">영상</SelectItem>
+                      <SelectItem value="image">이미지</SelectItem>
+                      <SelectItem value="other">기타</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-3">
+                  <Label>권리자 구분 *</Label>
+                  <RadioGroup value={copyrightForm.rightsOwnerType} onValueChange={(value) => setCopyrightForm(prev => ({ ...prev, rightsOwnerType: value }))}>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="myself" id="myself" />
+                      <Label htmlFor="myself">본인 (저작권자 본인)</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="representative" id="representative" />
+                      <Label htmlFor="representative">대리인 (저작권자의 대리인)</Label>
+                    </div>
+                  </RadioGroup>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="copyrightOwner">저작권자 정보 *</Label>
+                  <Input
+                    id="copyrightOwner"
+                    value={copyrightForm.copyrightOwner}
+                    onChange={(e) => setCopyrightForm(prev => ({ ...prev, copyrightOwner: e.target.value }))}
+                    placeholder="저작권자의 성명 또는 회사명을 입력하세요"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="description">신고 사유 *</Label>
+                  <Textarea
+                    id="description"
+                    value={copyrightForm.description}
+                    onChange={(e) => setCopyrightForm(prev => ({ ...prev, description: e.target.value }))}
+                    placeholder="저작권 침해에 대한 구체적인 사유를 설명해주세요..."
+                    rows={4}
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="evidence">증거 자료</Label>
+                  <Textarea
+                    id="evidence"
+                    value={copyrightForm.evidence}
+                    onChange={(e) => setCopyrightForm(prev => ({ ...prev, evidence: e.target.value }))}
+                    placeholder="원본 저작물의 URL, 등록번호, 기타 증거 자료를 제공해주세요..."
+                    rows={3}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="contactEmail">연락처 이메일 *</Label>
+                  <Input
+                    id="contactEmail"
+                    type="email"
+                    value={copyrightForm.contactEmail}
+                    onChange={(e) => setCopyrightForm(prev => ({ ...prev, contactEmail: e.target.value }))}
+                    placeholder="연락 가능한 이메일 주소를 입력하세요"
+                    required
+                  />
+                </div>
+
+                <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    • 허위 신고는 법적 처벌을 받을 수 있습니다.<br />
+                    • 신고 처리 결과는 제공해주신 이메일로 안내됩니다.<br />
+                    • 보다 정확한 검토를 위해 추가 자료를 요청할 수 있습니다.
+                  </p>
+                </div>
+
+                <div className="flex justify-end gap-2 pt-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setShowCopyrightDialog(false)}
+                  >
+                    취소
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={copyrightReportMutation.isPending}
+                    className="bg-orange-600 hover:bg-orange-700"
+                  >
+                    {copyrightReportMutation.isPending ? "접수 중..." : "신고 접수"}
+                  </Button>
+                </div>
+              </form>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </Layout>
   );

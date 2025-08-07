@@ -12,6 +12,7 @@ import {
   payments,
   videoThumbnails,
   creatorSettings,
+  copyrightReports,
   type User,
   type UpsertUser,
   type Video,
@@ -38,6 +39,8 @@ import {
   type InsertCreatorSettings,
   type Subscription,
   type InsertSubscription,
+  type CopyrightReport,
+  type InsertCopyrightReport,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, sql, count } from "drizzle-orm";
@@ -118,6 +121,12 @@ export interface IStorage {
   createSubscription(subscription: InsertSubscription): Promise<Subscription>;
   getSubscription(userId: string, channelId: string): Promise<Subscription | undefined>;
   cancelSubscription(userId: string, channelId: string): Promise<void>;
+
+  // Copyright report operations
+  createCopyrightReport(report: InsertCopyrightReport): Promise<CopyrightReport>;
+  getCopyrightReportsByUser(reporterId: string): Promise<CopyrightReport[]>;
+  getCopyrightReportsByVideo(videoId: string): Promise<CopyrightReport[]>;
+  updateCopyrightReportStatus(id: string, status: string, reviewerNotes?: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -674,6 +683,43 @@ export class DatabaseStorage implements IStorage {
         eq(subscriptions.userId, userId),
         eq(subscriptions.channelId, channelId)
       ));
+  }
+
+  // Copyright report operations
+  async createCopyrightReport(report: InsertCopyrightReport): Promise<CopyrightReport> {
+    const [created] = await db.insert(copyrightReports).values(report).returning();
+    return created;
+  }
+
+  async getCopyrightReportsByUser(reporterId: string): Promise<CopyrightReport[]> {
+    return await db
+      .select()
+      .from(copyrightReports)
+      .where(eq(copyrightReports.reporterId, reporterId))
+      .orderBy(desc(copyrightReports.createdAt));
+  }
+
+  async getCopyrightReportsByVideo(videoId: string): Promise<CopyrightReport[]> {
+    return await db
+      .select()
+      .from(copyrightReports)
+      .where(eq(copyrightReports.videoId, videoId))
+      .orderBy(desc(copyrightReports.createdAt));
+  }
+
+  async updateCopyrightReportStatus(id: string, status: string, reviewerNotes?: string): Promise<void> {
+    const updateData: any = { 
+      status, 
+      reviewedAt: new Date(),
+      updatedAt: new Date()
+    };
+    if (reviewerNotes) {
+      updateData.reviewerNotes = reviewerNotes;
+    }
+    await db
+      .update(copyrightReports)
+      .set(updateData)
+      .where(eq(copyrightReports.id, id));
   }
 }
 
