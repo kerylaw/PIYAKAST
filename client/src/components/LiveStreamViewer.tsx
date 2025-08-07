@@ -80,9 +80,11 @@ export default function LiveStreamViewer({
 
   // Initialize WebSocket for chat
   useEffect(() => {
+    // Use window.location.host which includes port automatically
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const wsUrl = `${protocol}//${window.location.host}/ws`;
     
+    console.log("Connecting to WebSocket:", wsUrl);
     wsRef.current = new WebSocket(wsUrl);
 
     wsRef.current.onopen = () => {

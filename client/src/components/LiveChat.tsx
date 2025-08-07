@@ -295,7 +295,7 @@ function ChatMessageItem({ message }: ChatMessageItemProps) {
           {isSuperchat && message.amount && (
             <Badge className="text-xs px-1 py-0 bg-white/20 text-white">
               <Gift className="w-3 h-3 mr-1" />
-              {formatCurrency(message.amount, message.currency)}
+              {message.amount?.toLocaleString('ko-KR')}원
             </Badge>
           )}
           
