@@ -14,14 +14,25 @@ import Trending from "@/pages/Trending";
 import LiveNow from "@/pages/LiveNow";
 import Videos from "@/pages/Videos";
 import Category from "@/pages/Category";
+import AuthPage from "@/pages/auth-page";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
 
   return (
     <Switch>
-      {isLoading || !isAuthenticated ? (
-        <Route path="/" component={Landing} />
+      {isLoading ? (
+        <Route path="*">
+          <div className="min-h-screen flex items-center justify-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+          </div>
+        </Route>
+      ) : !isAuthenticated ? (
+        <>
+          <Route path="/" component={Landing} />
+          <Route path="/auth" component={AuthPage} />
+          <Route component={Landing} />
+        </>
       ) : (
         <>
           <Route path="/" component={Home} />

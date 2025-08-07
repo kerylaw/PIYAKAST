@@ -42,7 +42,7 @@ export default function Landing() {
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button
                 size="lg"
-                onClick={() => window.location.href = "/api/login"}
+                onClick={() => window.location.href = "/auth"}
                 className="bg-primary-purple hover:bg-purple-700 text-lg px-8 py-4"
                 data-testid="button-start-streaming"
               >

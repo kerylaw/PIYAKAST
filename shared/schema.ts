@@ -24,14 +24,18 @@ export const sessions = pgTable(
   (table) => [index("IDX_session_expire").on(table.expire)],
 );
 
-// Users table - required for Replit Auth
+// Users table
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   email: varchar("email").unique(),
+  password: varchar("password"), // for email login
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
   username: varchar("username").unique(),
+  provider: varchar("provider").default("email"), // email, google, kakao, naver
+  providerId: varchar("provider_id"), // OAuth provider ID
+  isEmailVerified: boolean("is_email_verified").default(false),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -66,12 +70,20 @@ export const streams = pgTable("streams", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// Comments table for videos
-export const comments = pgTable("comments", {
+// Comments table for videos (YouTube-style threading)  
+export const comments: any = pgTable("comments", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  videoId: varchar("video_id").notNull().references(() => videos.id),
+  videoId: varchar("video_id").references(() => videos.id), // null for stream comments
+  streamId: varchar("stream_id").references(() => streams.id), // null for video comments
   userId: varchar("user_id").notNull().references(() => users.id),
   content: text("content").notNull(),
+  parentId: varchar("parent_id").references((): any => comments.id), // for reply threading
+  likeCount: integer("like_count").default(0),
+  dislikeCount: integer("dislike_count").default(0),
+  isHearted: boolean("is_hearted").default(false), // creator heart
+  isPinned: boolean("is_pinned").default(false),
+  isEdited: boolean("is_edited").default(false),
+  editedAt: timestamp("edited_at"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -81,6 +93,12 @@ export const chatMessages = pgTable("chat_messages", {
   streamId: varchar("stream_id").notNull().references(() => streams.id),
   userId: varchar("user_id").notNull().references(() => users.id),
   message: text("message").notNull(),
+  type: varchar("type").default("normal"), // normal, superchat, moderator
+  amount: integer("amount"), // for superchat donations
+  currency: varchar("currency").default("KRW"), // for superchat
+  color: varchar("color"), // superchat background color
+  isModeratorMessage: boolean("is_moderator_message").default(false),
+  isPinned: boolean("is_pinned").default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -101,6 +119,41 @@ export const follows = pgTable("follows", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Comment likes/dislikes
+export const commentLikes = pgTable("comment_likes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  commentId: varchar("comment_id").notNull().references(() => comments.id),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  isLike: boolean("is_like").notNull(), // true for like, false for dislike
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Superchat donations
+export const superchats = pgTable("superchats", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  streamId: varchar("stream_id").notNull().references(() => streams.id),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  message: text("message").notNull(),
+  amount: integer("amount").notNull(),
+  currency: varchar("currency").default("KRW"),
+  color: varchar("color").notNull(),
+  displayDuration: integer("display_duration").default(120), // seconds
+  isProcessed: boolean("is_processed").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// User subscriptions/memberships
+export const subscriptions = pgTable("subscriptions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  channelId: varchar("channel_id").notNull().references(() => users.id),
+  tier: varchar("tier").default("basic"), // basic, premium
+  isActive: boolean("is_active").default(true),
+  startDate: timestamp("start_date").defaultNow(),
+  endDate: timestamp("end_date"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   videos: many(videos),
@@ -108,6 +161,10 @@ export const usersRelations = relations(users, ({ many }) => ({
   comments: many(comments),
   chatMessages: many(chatMessages),
   videoLikes: many(videoLikes),
+  commentLikes: many(commentLikes),
+  superchats: many(superchats),
+  subscriptions: many(subscriptions, { relationName: "subscriber" }),
+  subscribers: many(subscriptions, { relationName: "channel" }),
   followers: many(follows, { relationName: "following" }),
   following: many(follows, { relationName: "follower" }),
 }));
@@ -141,6 +198,21 @@ export const videoLikesRelations = relations(videoLikes, ({ one }) => ({
 export const followsRelations = relations(follows, ({ one }) => ({
   follower: one(users, { fields: [follows.followerId], references: [users.id], relationName: "follower" }),
   following: one(users, { fields: [follows.followingId], references: [users.id], relationName: "following" }),
+}));
+
+export const commentLikesRelations = relations(commentLikes, ({ one }) => ({
+  comment: one(comments, { fields: [commentLikes.commentId], references: [comments.id] }),
+  user: one(users, { fields: [commentLikes.userId], references: [users.id] }),
+}));
+
+export const superchatsRelations = relations(superchats, ({ one }) => ({
+  stream: one(streams, { fields: [superchats.streamId], references: [streams.id] }),
+  user: one(users, { fields: [superchats.userId], references: [users.id] }),
+}));
+
+export const subscriptionsRelations = relations(subscriptions, ({ one }) => ({
+  user: one(users, { fields: [subscriptions.userId], references: [users.id], relationName: "subscriber" }),
+  channel: one(users, { fields: [subscriptions.channelId], references: [users.id], relationName: "channel" }),
 }));
 
 // Insert schemas
@@ -186,6 +258,39 @@ export const insertFollowSchema = createInsertSchema(follows).omit({
   createdAt: true,
 });
 
+export const insertCommentLikeSchema = createInsertSchema(commentLikes).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertSuperchatSchema = createInsertSchema(superchats).omit({
+  id: true,
+  createdAt: true,
+  isProcessed: true,
+});
+
+export const insertSubscriptionSchema = createInsertSchema(subscriptions).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Login schemas
+export const loginSchema = z.object({
+  email: z.string().email("유효한 이메일을 입력해주세요"),
+  password: z.string().min(6, "비밀번호는 6자 이상이어야 합니다"),
+});
+
+export const registerSchema = z.object({
+  email: z.string().email("유효한 이메일을 입력해주세요"),
+  password: z.string().min(6, "비밀번호는 6자 이상이어야 합니다"),
+  firstName: z.string().min(1, "이름을 입력해주세요"),
+  lastName: z.string().min(1, "성을 입력해주세요"),
+  username: z.string().min(3, "사용자명은 3자 이상이어야 합니다").max(30, "사용자명은 30자 이하여야 합니다"),
+});
+
+export type LoginData = z.infer<typeof loginSchema>;
+export type RegisterData = z.infer<typeof registerSchema>;
+
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -201,3 +306,9 @@ export type InsertVideoLike = z.infer<typeof insertVideoLikeSchema>;
 export type VideoLike = typeof videoLikes.$inferSelect;
 export type InsertFollow = z.infer<typeof insertFollowSchema>;
 export type Follow = typeof follows.$inferSelect;
+export type InsertCommentLike = z.infer<typeof insertCommentLikeSchema>;
+export type CommentLike = typeof commentLikes.$inferSelect;
+export type InsertSuperchat = z.infer<typeof insertSuperchatSchema>;
+export type Superchat = typeof superchats.$inferSelect;
+export type InsertSubscription = z.infer<typeof insertSubscriptionSchema>;
+export type Subscription = typeof subscriptions.$inferSelect;

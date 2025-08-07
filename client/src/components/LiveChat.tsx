@@ -1,197 +1,320 @@
 import { useState, useEffect, useRef } from "react";
-import { Send, Smile, DollarSign } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useAuth } from "@/hooks/useAuth";
+import { 
+  Send, 
+  Heart, 
+  Gift, 
+  Crown, 
+  Star,
+  DollarSign
+} from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { ko } from "date-fns/locale";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { SuperChatModal } from "./SuperChatModal";
 
 interface ChatMessage {
   id: string;
+  userId: string;
   message: string;
+  type: "normal" | "superchat" | "moderator";
+  amount?: number;
+  currency?: string;
+  color?: string;
+  isModeratorMessage: boolean;
+  isPinned: boolean;
   createdAt: string;
   user: {
     id: string;
     username: string;
-    profileImageUrl?: string;
+    firstName: string;
+    lastName: string;
+    profileImageUrl: string | null;
   };
 }
 
 interface LiveChatProps {
   streamId: string;
-  className?: string;
+  isCreator?: boolean;
 }
 
-export default function LiveChat({ streamId, className }: LiveChatProps) {
-  const { user, isAuthenticated } = useAuth();
+export function LiveChat({ streamId, isCreator }: LiveChatProps) {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState("");
-  const [ws, setWs] = useState<WebSocket | null>(null);
+  const [showSuperChatModal, setShowSuperChatModal] = useState(false);
+  const [isConnected, setIsConnected] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const wsRef = useRef<WebSocket | null>(null);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
+  // WebSocket connection
   useEffect(() => {
-    if (!streamId) return;
+    if (!user || !streamId) return;
 
-    // Connect to WebSocket
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const wsUrl = `${protocol}//${window.location.host}/ws`;
-    const websocket = new WebSocket(wsUrl);
+    const ws = new WebSocket(wsUrl);
+    wsRef.current = ws;
 
-    websocket.onopen = () => {
-      console.log('Connected to chat');
-      // Join the stream room
-      websocket.send(JSON.stringify({
-        type: 'join_stream',
-        streamId: streamId,
+    ws.onopen = () => {
+      setIsConnected(true);
+      ws.send(JSON.stringify({
+        type: "join_stream",
+        streamId,
+        userId: user.id,
       }));
     };
 
-    websocket.onmessage = (event) => {
+    ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
       
-      switch (data.type) {
-        case 'chat_history':
-          setMessages(data.messages);
-          break;
-        case 'new_message':
-          setMessages(prev => [...prev, data.message]);
-          break;
+      if (data.type === "chat_message") {
+        setMessages(prev => [...prev, data.message]);
+      } else if (data.type === "superchat") {
+        setMessages(prev => [...prev, { ...data.message, type: "superchat" }]);
       }
     };
 
-    websocket.onclose = () => {
-      console.log('Disconnected from chat');
+    ws.onclose = () => {
+      setIsConnected(false);
     };
 
-    setWs(websocket);
+    ws.onerror = (error) => {
+      console.error("WebSocket error:", error);
+      setIsConnected(false);
+    };
 
     return () => {
-      websocket.close();
+      ws.close();
     };
-  }, [streamId]);
+  }, [user, streamId]);
 
+  // Auto scroll to bottom
   useEffect(() => {
-    scrollToBottom();
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const sendMessage = (e: React.FormEvent) => {
+  const sendMessageMutation = useMutation({
+    mutationFn: async (message: string) => {
+      if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+        throw new Error("연결이 끊어졌습니다");
+      }
+      
+      wsRef.current.send(JSON.stringify({
+        type: "chat_message",
+        streamId,
+        message,
+        userId: user?.id,
+      }));
+    },
+    onError: () => {
+      toast({
+        title: "메시지 전송 실패",
+        description: "다시 시도해주세요.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!newMessage.trim() || !user || !isConnected) return;
     
-    if (!newMessage.trim() || !ws || !user) return;
-
-    ws.send(JSON.stringify({
-      type: 'chat_message',
-      userId: user.id,
-      message: newMessage,
-    }));
-
+    sendMessageMutation.mutate(newMessage.trim());
     setNewMessage("");
   };
 
-  const handleSuperChat = () => {
-    // TODO: Implement SuperChat functionality
-    console.log('SuperChat clicked');
+  const handleSuperChat = (data: { message: string; amount: number }) => {
+    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+      toast({
+        title: "연결 오류",
+        description: "채팅 연결이 끊어졌습니다.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    wsRef.current.send(JSON.stringify({
+      type: "superchat",
+      streamId,
+      message: data.message,
+      amount: data.amount,
+      userId: user?.id,
+    }));
+
+    setShowSuperChatModal(false);
   };
 
+  const getSuperchatColor = (amount: number): string => {
+    if (amount >= 50000) return "bg-gradient-to-r from-red-500 to-pink-500";
+    if (amount >= 20000) return "bg-gradient-to-r from-purple-500 to-blue-500";
+    if (amount >= 10000) return "bg-gradient-to-r from-green-500 to-teal-500";
+    if (amount >= 5000) return "bg-gradient-to-r from-yellow-500 to-orange-500";
+    return "bg-gradient-to-r from-blue-400 to-indigo-500";
+  };
+
+  const formatCurrency = (amount: number, currency: string = "KRW"): string => {
+    if (currency === "KRW") {
+      return `₩${amount.toLocaleString()}`;
+    }
+    return `$${amount}`;
+  };
+
+  if (!user) {
+    return (
+      <Card className="h-[500px] flex items-center justify-center">
+        <CardContent className="text-center">
+          <p className="text-gray-500 dark:text-gray-400 mb-4">
+            채팅에 참여하려면 로그인이 필요합니다.
+          </p>
+          <Button onClick={() => window.location.href = "/auth"}>
+            로그인하기
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
-    <div className={`flex flex-col h-full bg-elevated border-l border-gray-700 ${className}`}>
-      {/* Chat Header */}
-      <div className="p-4 border-b border-gray-700">
-        <h3 className="font-semibold" data-testid="text-chat-title">Live Chat</h3>
-        <p className="text-sm text-gray-400" data-testid="text-viewer-count">
-          {messages.length} messages
-        </p>
-      </div>
-
-      {/* Chat Messages */}
-      <ScrollArea className="flex-1 p-4">
-        <div className="space-y-3">
-          {messages.map((message) => (
-            <div key={message.id} className="flex items-start space-x-3" data-testid={`message-${message.id}`}>
-              <Avatar className="w-6 h-6 flex-shrink-0">
-                <AvatarImage src={message.user.profileImageUrl} alt={message.user.username} />
-                <AvatarFallback>{message.user.username.charAt(0).toUpperCase()}</AvatarFallback>
-              </Avatar>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center space-x-2">
-                  <span className="font-medium text-sm text-primary-purple" data-testid={`text-message-username-${message.id}`}>
-                    {message.user.username}
-                  </span>
-                  <span className="text-xs text-gray-400" data-testid={`text-message-time-${message.id}`}>
-                    {formatDistanceToNow(new Date(message.createdAt), { addSuffix: true })}
-                  </span>
-                </div>
-                <p className="text-sm text-gray-300 break-words" data-testid={`text-message-content-${message.id}`}>
-                  {message.message}
-                </p>
-              </div>
-            </div>
-          ))}
-          <div ref={messagesEndRef} />
-        </div>
-      </ScrollArea>
-
-      {/* Chat Input */}
-      {isAuthenticated ? (
-        <div className="p-4 border-t border-gray-700">
-          <form onSubmit={sendMessage} className="flex items-center space-x-2">
-            <div className="flex-1 relative">
-              <Input
-                type="text"
-                placeholder="Say something..."
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                className="pr-10 bg-card-bg border-gray-600 text-white placeholder-gray-400"
-                data-testid="input-chat-message"
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="absolute right-2 top-1/2 transform -translate-y-1/2 h-6 w-6 text-gray-400 hover:text-primary-purple"
-                data-testid="button-emoji"
-              >
-                <Smile className="h-4 w-4" />
-              </Button>
+    <>
+      <Card className="h-[500px] flex flex-col">
+        <CardHeader className="py-3">
+          <CardTitle className="flex items-center justify-between text-base">
+            <div className="flex items-center gap-2">
+              <span>실시간 채팅</span>
+              <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
+              <span className="text-xs text-gray-500">
+                {isConnected ? "연결됨" : "연결 중..."}
+              </span>
             </div>
             <Button
-              type="submit"
-              size="icon"
-              className="bg-primary-purple hover:bg-purple-700"
-              disabled={!newMessage.trim()}
-              data-testid="button-send-message"
+              size="sm"
+              variant="outline"
+              onClick={() => setShowSuperChatModal(true)}
+              className="flex items-center gap-1 text-xs"
+              data-testid="button-superchat"
             >
-              <Send className="h-4 w-4" />
+              <DollarSign className="w-3 h-3" />
+              슈퍼챗
             </Button>
-          </form>
+          </CardTitle>
+        </CardHeader>
+        
+        <CardContent className="flex-1 flex flex-col p-0">
+          <ScrollArea className="flex-1 px-4">
+            <div className="space-y-3 pb-4">
+              {messages.map((message) => (
+                <ChatMessageItem key={message.id} message={message} />
+              ))}
+              <div ref={messagesEndRef} />
+            </div>
+          </ScrollArea>
+          
+          <div className="border-t p-4">
+            <form onSubmit={handleSendMessage} className="flex gap-2">
+              <Input
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                placeholder="메시지를 입력하세요..."
+                className="flex-1"
+                disabled={!isConnected}
+                data-testid="input-chat-message"
+                maxLength={200}
+              />
+              <Button
+                type="submit"
+                size="icon"
+                disabled={!newMessage.trim() || !isConnected || sendMessageMutation.isPending}
+                data-testid="button-send-message"
+              >
+                <Send className="w-4 h-4" />
+              </Button>
+            </form>
+          </div>
+        </CardContent>
+      </Card>
 
-          {/* SuperChat Button */}
-          <Button
-            onClick={handleSuperChat}
-            className="w-full mt-2 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-black font-medium"
-            data-testid="button-super-chat"
-          >
-            <DollarSign className="mr-2 h-4 w-4" />
-            Send Super Chat
-          </Button>
+      <SuperChatModal
+        open={showSuperChatModal}
+        onOpenChange={setShowSuperChatModal}
+        onSubmit={handleSuperChat}
+      />
+    </>
+  );
+}
+
+interface ChatMessageItemProps {
+  message: ChatMessage;
+}
+
+function ChatMessageItem({ message }: ChatMessageItemProps) {
+  const isSuperchat = message.type === "superchat";
+  const isModerator = message.isModeratorMessage;
+
+  return (
+    <div 
+      className={`flex gap-2 p-2 rounded-lg ${
+        isSuperchat 
+          ? `${message.color || "bg-blue-500"} text-white` 
+          : isModerator 
+            ? "bg-green-100 dark:bg-green-900/20" 
+            : ""
+      } ${message.isPinned ? "border-2 border-yellow-400" : ""}`}
+      data-testid={`message-${message.id}`}
+    >
+      <Avatar className="w-6 h-6 flex-shrink-0">
+        <AvatarImage src={message.user.profileImageUrl || ""} />
+        <AvatarFallback>
+          {message.user.firstName?.charAt(0) || message.user.username?.charAt(0) || "U"}
+        </AvatarFallback>
+      </Avatar>
+      
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-1 flex-wrap">
+          <span className={`text-sm font-medium ${isSuperchat ? "text-white" : ""}`}>
+            {message.user.firstName} {message.user.lastName}
+          </span>
+          
+          {isModerator && (
+            <Badge variant="secondary" className="text-xs px-1 py-0">
+              <Crown className="w-3 h-3 mr-1" />
+              MOD
+            </Badge>
+          )}
+          
+          {isSuperchat && message.amount && (
+            <Badge className="text-xs px-1 py-0 bg-white/20 text-white">
+              <Gift className="w-3 h-3 mr-1" />
+              {formatCurrency(message.amount, message.currency)}
+            </Badge>
+          )}
+          
+          {message.isPinned && (
+            <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
+          )}
+          
+          <span className={`text-xs ${isSuperchat ? "text-white/80" : "text-gray-500 dark:text-gray-400"}`}>
+            {formatDistanceToNow(new Date(message.createdAt), { 
+              addSuffix: true, 
+              locale: ko 
+            })}
+          </span>
         </div>
-      ) : (
-        <div className="p-4 border-t border-gray-700 text-center">
-          <p className="text-gray-400 mb-2">Sign in to chat</p>
-          <Button
-            onClick={() => window.location.href = "/api/login"}
-            className="bg-primary-purple hover:bg-purple-700"
-            data-testid="button-login-to-chat"
-          >
-            Sign In
-          </Button>
-        </div>
-      )}
+        
+        <p className={`text-sm break-words ${isSuperchat ? "text-white font-medium" : ""}`}>
+          {message.message}
+        </p>
+      </div>
     </div>
   );
 }

@@ -6,6 +6,9 @@ import {
   chatMessages,
   videoLikes,
   follows,
+  commentLikes,
+  superchats,
+  subscriptions,
   type User,
   type UpsertUser,
   type Video,
@@ -20,15 +23,23 @@ import {
   type InsertVideoLike,
   type Follow,
   type InsertFollow,
+  type CommentLike,
+  type InsertCommentLike,
+  type Superchat,
+  type InsertSuperchat,
+  type Subscription,
+  type InsertSubscription,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, sql, count } from "drizzle-orm";
 
 export interface IStorage {
-  // User operations - mandatory for Replit Auth
+  // User operations
   getUser(id: string): Promise<User | undefined>;
-  upsertUser(user: UpsertUser): Promise<User>;
+  createUser(user: UpsertUser): Promise<User>;
+  getUserByEmail(email: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
+  getUserByProviderId(provider: string, providerId: string): Promise<User | undefined>;
 
   // Video operations
   createVideo(video: InsertVideo): Promise<Video>;
@@ -64,6 +75,21 @@ export interface IStorage {
   unfollowUser(followerId: string, followingId: string): Promise<void>;
   getFollowing(userId: string): Promise<User[]>;
   getFollowers(userId: string): Promise<User[]>;
+  
+  // Comment operations (enhanced)
+  createCommentWithParent(comment: InsertComment): Promise<Comment>;
+  getCommentReplies(commentId: string): Promise<Comment[]>;
+  toggleCommentLike(like: InsertCommentLike): Promise<CommentLike | null>;
+  updateCommentCounts(commentId: string): Promise<void>;
+  
+  // Superchat operations
+  createSuperchat(superchat: InsertSuperchat): Promise<Superchat>;
+  getSuperchats(streamId: string): Promise<Superchat[]>;
+  
+  // Subscription operations
+  createSubscription(subscription: InsertSubscription): Promise<Subscription>;
+  getSubscription(userId: string, channelId: string): Promise<Subscription | undefined>;
+  cancelSubscription(userId: string, channelId: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -73,23 +99,26 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  async upsertUser(userData: UpsertUser): Promise<User> {
-    const [user] = await db
-      .insert(users)
-      .values(userData)
-      .onConflictDoUpdate({
-        target: users.id,
-        set: {
-          ...userData,
-          updatedAt: new Date(),
-        },
-      })
-      .returning();
+  async createUser(userData: UpsertUser): Promise<User> {
+    const [user] = await db.insert(users).values(userData).returning();
+    return user;
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
     return user;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user;
+  }
+
+  async getUserByProviderId(provider: string, providerId: string): Promise<User | undefined> {
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(and(eq(users.provider, provider), eq(users.providerId, providerId)));
     return user;
   }
 
@@ -353,6 +382,121 @@ export class DatabaseStorage implements IStorage {
       .where(eq(follows.followingId, userId));
 
     return followers.map(f => f.user);
+  }
+  
+  // Enhanced Comment operations
+  async createCommentWithParent(comment: InsertComment): Promise<Comment> {
+    const [createdComment] = await db.insert(comments).values(comment).returning();
+    return createdComment;
+  }
+
+  async getCommentReplies(commentId: string): Promise<Comment[]> {
+    return await db
+      .select()
+      .from(comments)
+      .where(eq(comments.parentId, commentId))
+      .orderBy(comments.createdAt);
+  }
+
+  async toggleCommentLike(like: InsertCommentLike): Promise<CommentLike | null> {
+    const existing = await db
+      .select()
+      .from(commentLikes)
+      .where(and(
+        eq(commentLikes.commentId, like.commentId),
+        eq(commentLikes.userId, like.userId)
+      ));
+
+    if (existing.length > 0) {
+      const existingLike = existing[0];
+      if (existingLike.isLike === like.isLike) {
+        // Remove like/dislike
+        await db
+          .delete(commentLikes)
+          .where(eq(commentLikes.id, existingLike.id));
+        return null;
+      } else {
+        // Toggle like/dislike
+        const [updated] = await db
+          .update(commentLikes)
+          .set({ isLike: like.isLike })
+          .where(eq(commentLikes.id, existingLike.id))
+          .returning();
+        return updated;
+      }
+    } else {
+      // Create new like/dislike
+      const [created] = await db.insert(commentLikes).values(like).returning();
+      return created;
+    }
+  }
+
+  async updateCommentCounts(commentId: string): Promise<void> {
+    const likes = await db
+      .select({ count: count() })
+      .from(commentLikes)
+      .where(and(
+        eq(commentLikes.commentId, commentId),
+        eq(commentLikes.isLike, true)
+      ));
+
+    const dislikes = await db
+      .select({ count: count() })
+      .from(commentLikes)
+      .where(and(
+        eq(commentLikes.commentId, commentId),
+        eq(commentLikes.isLike, false)
+      ));
+
+    await db
+      .update(comments)
+      .set({
+        likeCount: likes[0]?.count || 0,
+        dislikeCount: dislikes[0]?.count || 0,
+      })
+      .where(eq(comments.id, commentId));
+  }
+
+  // Superchat operations
+  async createSuperchat(superchat: InsertSuperchat): Promise<Superchat> {
+    const [created] = await db.insert(superchats).values(superchat).returning();
+    return created;
+  }
+
+  async getSuperchats(streamId: string): Promise<Superchat[]> {
+    return await db
+      .select()
+      .from(superchats)
+      .where(eq(superchats.streamId, streamId))
+      .orderBy(desc(superchats.createdAt));
+  }
+
+  // Subscription operations
+  async createSubscription(subscription: InsertSubscription): Promise<Subscription> {
+    const [created] = await db.insert(subscriptions).values(subscription).returning();
+    return created;
+  }
+
+  async getSubscription(userId: string, channelId: string): Promise<Subscription | undefined> {
+    const [subscription] = await db
+      .select()
+      .from(subscriptions)
+      .where(and(
+        eq(subscriptions.userId, userId),
+        eq(subscriptions.channelId, channelId),
+        eq(subscriptions.isActive, true)
+      ));
+    return subscription;
+  }
+
+  async cancelSubscription(userId: string, channelId: string): Promise<void> {
+    await db
+      .update(subscriptions)
+      .set({ isActive: false, endDate: new Date() })
+      .where(and(
+        eq(subscriptions.userId, userId),
+        eq(subscriptions.channelId, channelId)
+      ));
   }
 }
 

@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated } from "./replitAuth";
+import { setupAuth, requireAuth } from "./auth";
 import { 
   insertVideoSchema, 
   insertStreamSchema, 
@@ -10,6 +10,8 @@ import {
   insertChatMessageSchema,
   insertVideoLikeSchema,
   insertFollowSchema,
+  insertSuperchatSchema,
+  insertCommentLikeSchema,
 } from "@shared/schema";
 import multer from "multer";
 import path from "path";
@@ -32,19 +34,9 @@ const upload = multer({
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
-  await setupAuth(app);
+  setupAuth(app);
 
-  // Auth routes
-  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
-      res.json(user);
-    } catch (error) {
-      console.error("Error fetching user:", error);
-      res.status(500).json({ message: "Failed to fetch user" });
-    }
-  });
+  // Auth routes are now handled in auth.ts
 
   // Video routes
   app.get('/api/videos', async (req, res) => {
@@ -74,9 +66,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/videos', isAuthenticated, upload.single('video'), async (req: any, res) => {
+  app.post('/api/videos', requireAuth, upload.single('video'), async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const videoData = insertVideoSchema.parse({
         ...req.body,
         userId,
@@ -125,9 +117,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/streams', isAuthenticated, async (req: any, res) => {
+  app.post('/api/streams', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const streamData = insertStreamSchema.parse({
         ...req.body,
         userId,
@@ -142,10 +134,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create Cloudflare stream
-  app.post('/api/streams/cloudflare', isAuthenticated, async (req: any, res) => {
+  app.post('/api/streams/cloudflare', requireAuth, async (req: any, res) => {
     try {
       console.log('🎥 Creating Cloudflare stream...', req.body);
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const { title, description, category } = req.body;
       
       const streamData = insertStreamSchema.parse({
@@ -227,7 +219,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch('/api/streams/:id/status', isAuthenticated, async (req: any, res) => {
+  app.patch('/api/streams/:id/status', requireAuth, async (req: any, res) => {
     try {
       const { isLive, viewerCount } = req.body;
       await storage.updateStreamStatus(req.params.id, isLive, viewerCount);
@@ -249,9 +241,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/videos/:videoId/comments', isAuthenticated, async (req: any, res) => {
+  app.post('/api/videos/:videoId/comments', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const commentData = insertCommentSchema.parse({
         videoId: req.params.videoId,
         userId,
@@ -267,9 +259,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Video likes routes
-  app.post('/api/videos/:videoId/like', isAuthenticated, async (req: any, res) => {
+  app.post('/api/videos/:videoId/like', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const likeData = insertVideoLikeSchema.parse({
         videoId: req.params.videoId,
         userId,
@@ -295,9 +287,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Follow routes
-  app.post('/api/users/:userId/follow', isAuthenticated, async (req: any, res) => {
+  app.post('/api/users/:userId/follow', requireAuth, async (req: any, res) => {
     try {
-      const followerId = req.user.claims.sub;
+      const followerId = req.user.id;
       const followingId = req.params.userId;
 
       if (followerId === followingId) {
@@ -317,9 +309,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/users/:userId/follow', isAuthenticated, async (req: any, res) => {
+  app.delete('/api/users/:userId/follow', requireAuth, async (req: any, res) => {
     try {
-      const followerId = req.user.claims.sub;
+      const followerId = req.user.id;
       const followingId = req.params.userId;
 
       await storage.unfollowUser(followerId, followingId);
