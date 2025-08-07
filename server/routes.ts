@@ -201,9 +201,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         } catch (cloudflareError) {
           console.error("Cloudflare API Error:", cloudflareError);
+          
+          // Delete the created stream since Cloudflare failed
+          try {
+            await storage.deleteStream(stream.id);
+          } catch (deleteError) {
+            console.error("Failed to cleanup stream:", deleteError);
+          }
+          
           return res.status(400).json({ 
             message: "Cloudflare Stream service is not enabled",
-            details: "Please enable Cloudflare Stream in your account dashboard to create live streams",
+            details: "Please enable Cloudflare Stream in your account dashboard first. Visit https://dash.cloudflare.com and navigate to Stream to activate the service.",
             error: cloudflareError instanceof Error ? cloudflareError.message : 'Unknown error'
           });
         }

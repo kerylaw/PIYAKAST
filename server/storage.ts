@@ -44,6 +44,7 @@ export interface IStorage {
   getLiveStreams(): Promise<Stream[]>;
   updateStreamStatus(id: string, isLive: boolean, viewerCount?: number): Promise<void>;
   getStreamsByUser(userId: string): Promise<Stream[]>;
+  deleteStream(id: string): Promise<void>;
 
   // Comment operations
   createComment(comment: InsertComment): Promise<Comment>;
@@ -213,6 +214,10 @@ export class DatabaseStorage implements IStorage {
       .from(streams)
       .where(eq(streams.userId, userId))
       .orderBy(desc(streams.createdAt));
+  }
+
+  async deleteStream(id: string): Promise<void> {
+    await db.delete(streams).where(eq(streams.id, id));
   }
 
   // Comment operations

@@ -69,11 +69,11 @@ export default function CloudflareLiveModal({ isOpen, onClose }: CloudflareLiveM
           window.location.href = "/api/login";
         }, 2000);
       } else if (error.message.includes("Cloudflare Stream service is not enabled")) {
-        errorMessage = "Cloudflare Stream 서비스가 활성화되지 않았습니다. 계정에서 Stream 서비스를 활성화해주세요.";
+        errorMessage = "Cloudflare Stream 서비스가 활성화되지 않았습니다. dash.cloudflare.com에서 Stream 서비스를 먼저 활성화해주세요. (유료 서비스)";
       } else if (error.message.includes("API credentials not configured")) {
         errorMessage = "Cloudflare API 자격 증명이 설정되지 않았습니다.";
-      } else if (error.message.includes("Authorization Failure")) {
-        errorMessage = "Cloudflare API 권한이 없습니다. API 토큰을 확인해주세요.";
+      } else if (error.message.includes("Authorization Failure") || error.message.includes("Unauthorized to access")) {
+        errorMessage = "Cloudflare API 권한이 없습니다. Stream 서비스를 활성화하고 API 토큰에 Stream 권한을 부여해주세요.";
       }
       
       toast({
