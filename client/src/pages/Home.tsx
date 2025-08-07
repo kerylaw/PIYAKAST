@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useEffect, useRef } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Layout from "@/components/Layout";
 import VideoCard from "@/components/VideoCard";
 import LiveStreamCard from "@/components/LiveStreamCard";
@@ -9,6 +9,8 @@ import { Play, TrendingUp } from "lucide-react";
 
 export default function Home() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const queryClient = useQueryClient();
+  const wsRef = useRef<WebSocket | null>(null);
 
   // Fetch popular videos
   const { data: videos = [], isLoading: videosLoading } = useQuery({
@@ -19,6 +21,49 @@ export default function Home() {
   const { data: liveStreams = [], isLoading: streamsLoading } = useQuery({
     queryKey: ["/api/streams/live"],
   });
+
+  // WebSocket connection for real-time updates
+  useEffect(() => {
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    const wsUrl = `${protocol}//${window.location.host}/ws`;
+    
+    const ws = new WebSocket(wsUrl);
+    wsRef.current = ws;
+
+    ws.onopen = () => {
+      console.log('🔌 WebSocket connected for real-time updates');
+    };
+
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        
+        switch (data.type) {
+          case 'stream_started':
+            // Invalidate streams query to refresh the list
+            queryClient.invalidateQueries({ queryKey: ["/api/streams/live"] });
+            console.log('🟢 Stream started, refreshing list:', data.streamId);
+            break;
+          case 'stream_stopped':
+            queryClient.invalidateQueries({ queryKey: ["/api/streams/live"] });
+            console.log('🔴 Stream stopped, refreshing list:', data.streamId);
+            break;
+        }
+      } catch (error) {
+        console.error('Error parsing WebSocket message:', error);
+      }
+    };
+
+    ws.onclose = () => {
+      console.log('🔌 WebSocket disconnected');
+    };
+
+    return () => {
+      if (wsRef.current) {
+        wsRef.current.close();
+      }
+    };
+  }, [queryClient]);
 
   return (
     <Layout>

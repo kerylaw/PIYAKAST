@@ -329,6 +329,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       await storage.updateStreamStatus(streamId, true, 0);
+      console.log(`🟢 Stream ${streamId} started by user ${userId}`);
+      
       res.json({ message: "Stream started" });
     } catch (error) {
       console.error("Error starting stream:", error);
@@ -352,6 +354,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       await storage.updateStreamStatus(streamId, false);
+      console.log(`🔴 Stream ${streamId} stopped by user ${userId}`);
+      
       res.json({ message: "Stream stopped" });
     } catch (error) {
       console.error("Error stopping stream:", error);
@@ -582,7 +586,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const streamConnections = new Map<string, Set<WebSocket>>();
 
   wss.on('connection', (ws, req) => {
-    console.log('New WebSocket connection');
+    console.log('🔌 New WebSocket connection');
     
     let currentStreamId: string | null = null;
 

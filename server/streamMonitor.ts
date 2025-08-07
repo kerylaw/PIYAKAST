@@ -24,7 +24,7 @@ export function getActiveStreams(): string[] {
   const now = Date.now();
   const active: string[] = [];
   
-  for (const [streamId, data] of activeStreams.entries()) {
+  for (const [streamId, data] of Array.from(activeStreams.entries())) {
     if (now - data.lastHeartbeat < HEARTBEAT_TIMEOUT) {
       active.push(streamId);
     }
@@ -40,7 +40,7 @@ async function cleanupInactiveStreams() {
     const streamsToDeactivate: string[] = [];
     
     // Find streams that haven't sent heartbeat recently
-    for (const [streamId, data] of activeStreams.entries()) {
+    for (const [streamId, data] of Array.from(activeStreams.entries())) {
       if (now - data.lastHeartbeat >= HEARTBEAT_TIMEOUT) {
         streamsToDeactivate.push(streamId);
         activeStreams.delete(streamId);
