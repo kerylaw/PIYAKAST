@@ -59,6 +59,7 @@ export default function LiveStreamViewer({
   
   // Check if current user is the stream owner
   const isOwner = user && streamerId ? (user.id === streamerId) : false;
+  console.log("Stream ownership check:", { userId: user?.id, streamerId, isOwner });
   const [currentViewerCount, setCurrentViewerCount] = useState(viewerCount);
 
   const videoRef = useRef<HTMLDivElement>(null);

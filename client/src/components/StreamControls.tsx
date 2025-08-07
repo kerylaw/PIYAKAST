@@ -17,8 +17,10 @@ export function StreamControls({ streamId, isLive, isOwner }: StreamControlsProp
 
   const startStreamMutation = useMutation({
     mutationFn: async () => {
+      console.log("Starting stream:", streamId, "isOwner:", isOwner);
       const response = await apiRequest("POST", `/api/streams/${streamId}/start`);
       const text = await response.text();
+      console.log("Start stream response:", text);
       try {
         return JSON.parse(text);
       } catch {
