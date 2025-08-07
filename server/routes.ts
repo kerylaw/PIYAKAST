@@ -155,68 +155,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "No video file provided" });
       }
 
-      // Try to upload to PeerTube first
-      let videoData: any = {
-        ...req.body,
+      // Basic video data without PeerTube columns
+      const videoData: any = {
+        title: req.body.title,
+        description: req.body.description || '',
+        category: req.body.category || 'Entertainment',
         userId,
-        videoUrl: `/uploads/${req.file.filename}`, // fallback to local
+        videoUrl: `/uploads/${req.file.filename}`,
+        isPublic: req.body.isPublic === 'true',
+        viewCount: 0,
       };
 
-      try {
-        const client = getPeerTubeClient();
-        
-        // Get user's channel (assuming first channel for now)
-        const channels = await client.getChannels();
-        const channelId = channels[0]?.id;
-        
-        if (!channelId) {
-          throw new Error('No PeerTube channel found');
-        }
-
-        // Map category to PeerTube category
-        const category = peertubeCategories[req.body.category as keyof typeof peertubeCategories] || 9; // default to Entertainment
-        
-        // Upload to PeerTube
-        const peertubeVideo = await client.uploadVideo(req.file.path, {
-          channelId,
-          name: req.body.title,
-          description: req.body.description || '',
-          category,
-          privacy: peertubePrivacy.PUBLIC,
-          language: 'ko', // Korean
-          nsfw: false,
-          tags: req.body.category ? [req.body.category] : []
-        });
-
-        // Update video data with PeerTube information
-        videoData = {
-          ...videoData,
-          peertubeId: peertubeVideo.id,
-          peertubeUuid: peertubeVideo.uuid,
-          peertubeEmbedUrl: peertubeVideo.embedUrl,
-          peertubeDownloadUrl: peertubeVideo.downloadUrl,
-          peertubeChannelId: channelId,
-          videoUrl: peertubeVideo.embedUrl, // Use PeerTube embed URL
-          thumbnailUrl: peertubeVideo.thumbnailUrl,
-          duration: peertubeVideo.duration,
-        };
-
-        console.log('✅ Video uploaded to PeerTube:', peertubeVideo.name);
-        
-        // Clean up local file
-        try {
-          fs.unlinkSync(req.file.path);
-        } catch (err: any) {
-          console.warn('Failed to delete local file:', err);
-        }
-        
-      } catch (peertubeError: any) {
-        console.warn('⚠️ PeerTube upload failed, using local storage:', peertubeError.message);
-        // Keep the local file path in videoUrl
-      }
-
       const video = await storage.createVideo(videoData);
-      res.status(201).json(video);
+      res.status(201).json({ 
+        videoId: video.id,
+        message: "Video uploaded successfully",
+        video 
+      });
     } catch (error) {
       console.error("Error creating video:", error);
       res.status(500).json({ message: "Failed to create video" });
@@ -907,7 +862,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Static file serving for thumbnails
+  // Static file serving for uploads
+  app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
   app.use('/uploads/thumbnails', express.static(path.join(process.cwd(), 'uploads/thumbnails')));
 
   // Create HTTP server
