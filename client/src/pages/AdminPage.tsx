@@ -145,25 +145,12 @@ export default function AdminPage() {
 
   // 관리자 권한 체크
   useEffect(() => {
-    // 디버깅: 현재 사용자 정보 출력
-    console.log("🔍 AdminPage - User info:", user);
-    console.log("🔍 AdminPage - isAuthenticated:", isAuthenticated);
-    console.log("🔍 AdminPage - user?.role:", user?.role);
-    
     if (!isAuthenticated) {
-      console.log("❌ Not authenticated, redirecting to /auth");
       window.location.href = "/auth";
       return;
     }
     
-    // 임시로 admin@piyakast.kr 사용자는 관리자 권한 허용
-    if (user?.email === 'admin@piyakast.kr' || user?.role === 'admin') {
-      console.log("✅ Admin access granted for:", user?.email || user?.role);
-      return;
-    }
-    
     if (user?.role !== 'admin') {
-      console.log("❌ Role check failed. Expected: 'admin', Got:", user?.role);
       toast({
         title: "접근 거부",
         description: "관리자 권한이 필요합니다.",
@@ -272,8 +259,7 @@ export default function AdminPage() {
     return new Intl.NumberFormat('ko-KR', { style: 'currency', currency: 'KRW' }).format(amount);
   };
 
-  // 임시로 admin@piyakast.kr 사용자는 관리자 권한 허용 (role 필드 문제 해결 전까지)
-  if (!user || (user.role !== 'admin' && user.email !== 'admin@piyakast.kr')) {
+  if (!user || user.role !== 'admin') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-red-900 via-red-800 to-black flex items-center justify-center">
         <Card className="max-w-md w-full mx-4 bg-red-950/50 border-red-700">
