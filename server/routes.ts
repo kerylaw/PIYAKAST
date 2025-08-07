@@ -156,17 +156,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const stream = await storage.createStream(streamData);
 
-      // Generate mock Cloudflare RTMP credentials
-      // In production, use actual Cloudflare Stream API
-      const streamKey = `cf_${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`;
-      const rtmpUrl = `rtmps://live.cloudflarestream.com/live/`;
+      // Create actual Cloudflare Live Input
+      if (process.env.CLOUDFLARE_API_TOKEN && process.env.CLOUDFLARE_ACCOUNT_ID) {
+        try {
+          const response = await fetch(
+            `https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}/stream/live_inputs`,
+            {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${process.env.CLOUDFLARE_API_TOKEN}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                meta: {
+                  name: title
+                },
+                recording: {
+                  mode: 'automatic',
+                  timeoutSeconds: 10
+                }
+              }),
+            }
+          );
 
-      res.json({
-        streamId: stream.id,
-        streamKey,
-        rtmpUrl,
-        playbackUrl: `/stream/${stream.id}`,
-      });
+          if (response.ok) {
+            const data = await response.json();
+            const liveInput = data.result;
+            
+            res.json({
+              streamId: stream.id,
+              streamKey: liveInput.uid,
+              rtmpUrl: liveInput.rtmps.url,
+              rtmpStreamKey: liveInput.rtmps.streamKey,
+              playbackUrl: `/stream/${stream.id}`,
+              cloudflareStreamId: liveInput.uid,
+            });
+          } else {
+            throw new Error('Failed to create Cloudflare Live Input');
+          }
+        } catch (cloudflareError) {
+          console.error("Cloudflare API Error:", cloudflareError);
+          // Fallback to mock credentials
+          const streamKey = `cf_${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`;
+          
+          res.json({
+            streamId: stream.id,
+            streamKey,
+            rtmpUrl: `rtmps://live.cloudflarestream.com/live/`,
+            rtmpStreamKey: streamKey,
+            playbackUrl: `/stream/${stream.id}`,
+            note: "Using demo credentials - configure CLOUDFLARE_API_TOKEN for production",
+          });
+        }
+      } else {
+        // Fallback when no API credentials
+        const streamKey = `cf_${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`;
+        
+        res.json({
+          streamId: stream.id,
+          streamKey,
+          rtmpUrl: `rtmps://live.cloudflarestream.com/live/`,
+          rtmpStreamKey: streamKey,
+          playbackUrl: `/stream/${stream.id}`,
+          note: "Demo mode - provide CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID for production streaming",
+        });
+      }
     } catch (error) {
       console.error("Error creating Cloudflare stream:", error);
       res.status(500).json({ message: "Failed to create Cloudflare stream" });
