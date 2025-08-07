@@ -234,7 +234,7 @@ export class PeerTubeClient {
         uuid: live.uuid,
         name: live.name,
         description: live.description,
-        rtmpUrl: live.rtmpUrl || `rtmp://127.0.0.1:1935/live`,
+        rtmpUrl: live.rtmpUrl || `rtmp://localhost:1935/live`,
         streamKey: live.streamKey,
         embedUrl: `${this.baseUrl}/videos/embed/${live.uuid}`,
         permanentLive: liveData.permanentLive,
@@ -334,7 +334,7 @@ export class PeerTubeClient {
         uuid: live.uuid,
         name: live.name,
         description: live.description,
-        rtmpUrl: live.rtmpUrl || `rtmp://127.0.0.1:1935/live`,
+        rtmpUrl: live.rtmpUrl || `rtmp://localhost:1935/live`,
         streamKey: live.streamKey,
         embedUrl: `${this.baseUrl}/videos/embed/${live.uuid}`,
         permanentLive: live.permanentLive,
@@ -354,17 +354,28 @@ export class PeerTubeClient {
    */
   async testConnection(): Promise<boolean> {
     try {
+      console.log('🔌 Attempting to connect to PeerTube at:', this.baseUrl);
       const response = await axios.get(`${this.baseUrl}/api/v1/config`, {
-        timeout: 10000, // 10초 타임아웃
+        timeout: 15000, // 15초 타임아웃으로 증가
         headers: {
-          'User-Agent': 'PIYAKast/1.0'
-        }
+          'User-Agent': 'PIYAKast/1.0',
+          'Accept': 'application/json'
+        },
+        validateStatus: (status) => status < 500 // 4xx도 허용
       });
+      
       console.log('✅ PeerTube connection successful');
-      console.log('Instance:', response.data.instance.name);
-      return true;
+      console.log('📊 Response status:', response.status);
+      if (response.data && response.data.instance) {
+        console.log('🏠 Instance:', response.data.instance.name);
+      }
+      return response.status < 400;
     } catch (error: any) {
-      console.error('❌ PeerTube connection failed:', error.message);
+      console.error('❌ PeerTube connection failed:', error.code || error.message);
+      if (error.response) {
+        console.error('📄 Response status:', error.response.status);
+        console.error('📝 Response data:', error.response.data);
+      }
       return false;
     }
   }

@@ -43,20 +43,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
   console.log('🎬 Initializing PeerTube integration...');
   const peertubeClient = initializePeerTube(peertubeConfig);
   
-  // Test connection and authenticate (immediate test)
+  // Test connection and authenticate (background retry)
   console.log('🔍 Testing PeerTube connection...');
-  try {
-    const isConnected = await peertubeClient.testConnection();
-    if (isConnected) {
-      await peertubeClient.authenticate();
-      console.log('✅ PeerTube integration ready');
-    } else {
-      console.log('⚠️ PeerTube server not running on port 9000 - using local storage');
+  let peertubeReady = false;
+  
+  const testPeerTubeConnection = async () => {
+    try {
+      const isConnected = await peertubeClient.testConnection();
+      if (isConnected && !peertubeReady) {
+        await peertubeClient.authenticate();
+        console.log('✅ PeerTube integration ready');
+        peertubeReady = true;
+      }
+      return isConnected;
+    } catch (error: any) {
+      return false;
     }
-  } catch (error: any) {
-    console.log('⚠️ PeerTube server not available:', error.message.substring(0, 100));
-    console.log('📁 Using local file storage for uploads');
+  };
+
+  // 즉시 테스트
+  const initialTest = await testPeerTubeConnection();
+  if (!initialTest) {
+    console.log('⚠️ Initial PeerTube connection failed - retrying in background');
+    
+    // 백그라운드에서 주기적으로 재시도
+    const retryInterval = setInterval(async () => {
+      const success = await testPeerTubeConnection();
+      if (success) {
+        clearInterval(retryInterval);
+      }
+    }, 10000); // 10초마다 재시도
+    
+    // 5분 후 재시도 중단
+    setTimeout(() => {
+      if (!peertubeReady) {
+        clearInterval(retryInterval);
+        console.log('📁 PeerTube connection timeout - using local storage permanently');
+      }
+    }, 300000);
   }
+  
+  // PeerTube 상태 확인 함수
+  app.get('/api/peertube/status', async (req, res) => {
+    try {
+      const isConnected = await peertubeClient.testConnection();
+      res.json({ connected: isConnected, ready: peertubeReady });
+    } catch (error) {
+      res.json({ connected: false, ready: false });
+    }
+  });
 
   // Auth routes are now handled in auth.ts
 

@@ -8,13 +8,14 @@ The application is built as a full-stack web platform with modern technologies, 
 
 ## Recent Changes (January 2025)
 
-✓ **PeerTube 통합 시스템 구현 (2025-01-07)**:
+✓ **PeerTube 통합 시스템 구현 및 네트워크 이슈 해결 (2025-01-07)**:
   - PeerTube API 클라이언트 완전 구현 (OAuth 2.0 인증, 비디오 업로드, 라이브 스트리밍)
   - 하이브리드 비디오 시스템: PeerTube 우선, 로컬 백업
   - 데이터베이스 스키마 확장: PeerTube 메타데이터 필드 추가
   - PeerTubeEmbed 컴포넌트: 임베드 비디오 플레이어
   - LiveStreamSetup 컴포넌트: OBS Studio 통합 가이드
   - 기존 코드 완전 백업 및 보존
+  - Replit 환경 네트워크 제한으로 인한 PeerTube 연결 이슈: 백그라운드 재시도 시스템 구현
 
 ✓ **완전한 인증 시스템 구현 (2025-01-07)**:
   - Replit 인증 완전 제거 및 독립적인 인증 시스템 구축

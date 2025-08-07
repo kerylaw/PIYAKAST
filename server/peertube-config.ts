@@ -1,8 +1,8 @@
 import { PeerTubeConfig } from './peertube';
 
-// PeerTube configuration
+// PeerTube configuration - 여러 URL 시도
 export const peertubeConfig: PeerTubeConfig = {
-  url: 'http://127.0.0.1:9000', // Local PeerTube instance
+  url: process.env.PEERTUBE_URL || 'http://127.0.0.1:9000', // 환경변수 우선
   username: 'root', // Admin username from config
   password: 'Yoyeom75!'
 };
