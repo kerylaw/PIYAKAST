@@ -118,7 +118,14 @@ export default function Header({ onMobileMenuToggle }: HeaderProps) {
                         <span>{theme === 'light' ? 'Dark Mode' : 'Light Mode'}</span>
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => window.location.href = "/api/logout"} data-testid="button-logout">
+                      <DropdownMenuItem onClick={async () => {
+                        try {
+                          await fetch('/api/logout', { method: 'POST' });
+                          window.location.href = '/';
+                        } catch (error) {
+                          console.error('Logout failed:', error);
+                        }
+                      }} data-testid="button-logout">
                         <LogOut className="mr-2 h-4 w-4" />
                         <span>Logout</span>
                       </DropdownMenuItem>

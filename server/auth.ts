@@ -1,6 +1,7 @@
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
+// @ts-ignore - Missing types for passport-kakao
 import { Strategy as KakaoStrategy } from "passport-kakao";
 import { Strategy as NaverStrategy } from "passport-naver-v2";
 import { Express } from "express";
@@ -89,7 +90,7 @@ export function setupAuth(app: Express) {
           clientSecret: process.env.GOOGLE_CLIENT_SECRET,
           callbackURL: "/api/auth/google/callback",
         },
-        async (accessToken, refreshToken, profile, done) => {
+        async (accessToken: any, refreshToken: any, profile: any, done: any) => {
           try {
             let user = await storage.getUserByProviderId('google', profile.id);
             
@@ -125,7 +126,7 @@ export function setupAuth(app: Express) {
           clientID: process.env.KAKAO_CLIENT_ID,
           callbackURL: "/api/auth/kakao/callback",
         },
-        async (accessToken, refreshToken, profile, done) => {
+        async (accessToken: any, refreshToken: any, profile: any, done: any) => {
           try {
             let user = await storage.getUserByProviderId('kakao', profile.id);
             
@@ -161,7 +162,7 @@ export function setupAuth(app: Express) {
           clientSecret: process.env.NAVER_CLIENT_SECRET,
           callbackURL: "/api/auth/naver/callback",
         },
-        async (accessToken, refreshToken, profile, done) => {
+        async (accessToken: any, refreshToken: any, profile: any, done: any) => {
           try {
             let user = await storage.getUserByProviderId('naver', profile.id);
             
@@ -304,13 +305,16 @@ export function setupAuth(app: Express) {
     }
   );
 
-  // Logout endpoint
-  app.post("/api/logout", (req, res, next) => {
-    req.logout((err) => {
+  // Logout endpoint (support both GET and POST)
+  const handleLogout = (req: any, res: any, next: any) => {
+    req.logout((err: any) => {
       if (err) return next(err);
       res.sendStatus(200);
     });
-  });
+  };
+  
+  app.post("/api/logout", handleLogout);
+  app.get("/api/logout", handleLogout);
 
   // Get current user
   app.get("/api/user", (req, res) => {
