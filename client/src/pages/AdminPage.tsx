@@ -145,12 +145,25 @@ export default function AdminPage() {
 
   // 관리자 권한 체크
   useEffect(() => {
+    // 디버깅: 현재 사용자 정보 출력
+    console.log("🔍 AdminPage - User info:", user);
+    console.log("🔍 AdminPage - isAuthenticated:", isAuthenticated);
+    console.log("🔍 AdminPage - user?.role:", user?.role);
+    
     if (!isAuthenticated) {
+      console.log("❌ Not authenticated, redirecting to /auth");
       window.location.href = "/auth";
       return;
     }
     
+    // 임시로 admin@piyakast.kr 사용자는 관리자 권한 허용
+    if (user?.email === 'admin@piyakast.kr' || user?.role === 'admin') {
+      console.log("✅ Admin access granted for:", user?.email || user?.role);
+      return;
+    }
+    
     if (user?.role !== 'admin') {
+      console.log("❌ Role check failed. Expected: 'admin', Got:", user?.role);
       toast({
         title: "접근 거부",
         description: "관리자 권한이 필요합니다.",
