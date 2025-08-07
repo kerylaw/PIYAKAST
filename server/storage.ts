@@ -53,6 +53,7 @@ export interface IStorage {
   createStream(stream: InsertStream): Promise<Stream>;
   getStream(id: string): Promise<Stream | undefined>;
   getLiveStreams(): Promise<Stream[]>;
+  getUserStreams(userId: string): Promise<Stream[]>;
   updateStreamStatus(id: string, isLive: boolean, viewerCount?: number): Promise<void>;
   getStreamsByUser(userId: string): Promise<Stream[]>;
   deleteStream(id: string): Promise<void>;
@@ -238,6 +239,14 @@ export class DatabaseStorage implements IStorage {
     }
 
     await db.update(streams).set(updateData).where(eq(streams.id, id));
+  }
+
+  async getUserStreams(userId: string): Promise<Stream[]> {
+    return await db
+      .select()
+      .from(streams)
+      .where(eq(streams.userId, userId))
+      .orderBy(desc(streams.createdAt));
   }
 
   async getStreamsByUser(userId: string): Promise<Stream[]> {

@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { Link } from "wouter";
-import { Search, Video, Menu, X, Settings, User, Upload, LogOut, Sun, Moon } from "lucide-react";
+import { Link, useLocation } from "wouter";
+import { Search, Video, Menu, X, Settings, User, Upload, LogOut, Sun, Moon, ArrowLeft } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -26,6 +27,19 @@ export default function Header({ onMobileMenuToggle }: HeaderProps) {
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showLiveStreamModal, setShowLiveStreamModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [location] = useLocation();
+
+  // Check if user has an active stream
+  const { data: userStreams = [] } = useQuery({
+    queryKey: ["/api/streams/user", user?.id],
+    enabled: !!user?.id && isAuthenticated,
+  });
+
+  const activeStream = Array.isArray(userStreams) 
+    ? userStreams.find((stream: any) => stream.isLive && stream.isPublic)
+    : null;
+
+  const isOnStreamPage = location.startsWith('/stream/');
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -76,14 +90,26 @@ export default function Header({ onMobileMenuToggle }: HeaderProps) {
             <div className="flex items-center space-x-4">
               {isAuthenticated ? (
                 <>
-                  <Button
-                    onClick={() => setShowLiveStreamModal(true)}
-                    className="hidden md:flex items-center space-x-2 bg-live-red hover:bg-red-700"
-                    data-testid="button-go-live"
-                  >
-                    <Video className="h-4 w-4" />
-                    <span>Go Live</span>
-                  </Button>
+                  {activeStream && !isOnStreamPage ? (
+                    <Link href={`/stream/${activeStream.id}`}>
+                      <Button
+                        className="hidden md:flex items-center space-x-2 bg-green-600 hover:bg-green-700"
+                        data-testid="button-go-back"
+                      >
+                        <ArrowLeft className="h-4 w-4" />
+                        <span>Go Back</span>
+                      </Button>
+                    </Link>
+                  ) : (
+                    <Button
+                      onClick={() => setShowLiveStreamModal(true)}
+                      className="hidden md:flex items-center space-x-2 bg-live-red hover:bg-red-700"
+                      data-testid="button-go-live"
+                    >
+                      <Video className="h-4 w-4" />
+                      <span>Go Live</span>
+                    </Button>
+                  )}
 
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>

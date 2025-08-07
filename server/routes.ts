@@ -233,6 +233,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get user's streams
+  app.get('/api/streams/user/:userId', async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const streams = await storage.getUserStreams(userId);
+      res.json(streams);
+    } catch (error) {
+      console.error("Error fetching user streams:", error);
+      res.status(500).json({ message: "Failed to fetch user streams" });
+    }
+  });
+
   app.get('/api/streams/:id', async (req, res) => {
     try {
       const stream = await storage.getStream(req.params.id);
