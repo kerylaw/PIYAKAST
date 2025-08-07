@@ -8,6 +8,8 @@ import {
   text,
   integer,
   boolean,
+  unique,
+  check,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
@@ -44,7 +46,10 @@ export const users = pgTable("users", {
   isSuspended: boolean("is_suspended").default(false),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => [
+  check("CHK_users_role", sql`${table.role} IN ('user', 'admin', 'creator')`),
+  check("CHK_users_provider", sql`${table.provider} IN ('email', 'google', 'kakao', 'naver')`),
+]);
 
 // Videos table for VOD content
 export const videos = pgTable("videos", {
@@ -67,7 +72,15 @@ export const videos = pgTable("videos", {
   isPublic: boolean("is_public").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => [
+  index("IDX_videos_user_id").on(table.userId),
+  index("IDX_videos_category").on(table.category),
+  index("IDX_videos_view_count").on(table.viewCount),
+  index("IDX_videos_created_at").on(table.createdAt),
+  index("IDX_videos_is_public_created_at").on(table.isPublic, table.createdAt),
+  check("CHK_videos_view_count", sql`${table.viewCount} >= 0`),
+  check("CHK_videos_duration", sql`${table.duration} >= 0`),
+]);
 
 // Live streams table
 export const streams = pgTable("streams", {
@@ -92,7 +105,13 @@ export const streams = pgTable("streams", {
   startedAt: timestamp("started_at"),
   endedAt: timestamp("ended_at"),
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => [
+  index("IDX_streams_user_id").on(table.userId),
+  index("IDX_streams_is_live").on(table.isLive),
+  index("IDX_streams_category").on(table.category),
+  index("IDX_streams_viewer_count").on(table.viewerCount),
+  index("IDX_streams_is_live_is_public").on(table.isLive, table.isPublic),
+]);
 
 // Comments table for videos (YouTube-style threading)  
 export const comments: any = pgTable("comments", {
@@ -109,7 +128,13 @@ export const comments: any = pgTable("comments", {
   isEdited: boolean("is_edited").default(false),
   editedAt: timestamp("edited_at"),
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => [
+  index("IDX_comments_video_id").on(table.videoId),
+  index("IDX_comments_stream_id").on(table.streamId),
+  index("IDX_comments_user_id").on(table.userId),
+  index("IDX_comments_parent_id").on(table.parentId),
+  index("IDX_comments_created_at").on(table.createdAt),
+]);
 
 // Chat messages for live streams
 export const chatMessages = pgTable("chat_messages", {
@@ -124,7 +149,12 @@ export const chatMessages = pgTable("chat_messages", {
   isModeratorMessage: boolean("is_moderator_message").default(false),
   isPinned: boolean("is_pinned").default(false),
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => [
+  index("IDX_chat_messages_stream_id").on(table.streamId),
+  index("IDX_chat_messages_user_id").on(table.userId),
+  index("IDX_chat_messages_created_at").on(table.createdAt),
+  index("IDX_chat_messages_stream_created").on(table.streamId, table.createdAt),
+]);
 
 // Likes/dislikes for videos
 export const videoLikes = pgTable("video_likes", {
@@ -133,7 +163,12 @@ export const videoLikes = pgTable("video_likes", {
   userId: varchar("user_id").notNull().references(() => users.id),
   isLike: boolean("is_like").notNull(), // true for like, false for dislike
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => [
+  index("IDX_video_likes_video_id").on(table.videoId),
+  index("IDX_video_likes_user_id").on(table.userId),
+  index("IDX_video_likes_video_user").on(table.videoId, table.userId),
+  unique("UQ_video_likes_video_user").on(table.videoId, table.userId),
+]);
 
 // Follows between users
 export const follows = pgTable("follows", {
@@ -141,7 +176,13 @@ export const follows = pgTable("follows", {
   followerId: varchar("follower_id").notNull().references(() => users.id),
   followingId: varchar("following_id").notNull().references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => [
+  index("IDX_follows_follower_id").on(table.followerId),
+  index("IDX_follows_following_id").on(table.followingId),
+  index("IDX_follows_follower_following").on(table.followerId, table.followingId),
+  unique("UQ_follows_follower_following").on(table.followerId, table.followingId),
+  check("CHK_follows_no_self_follow", sql`${table.followerId} != ${table.followingId}`),
+]);
 
 // Comment likes/dislikes
 export const commentLikes = pgTable("comment_likes", {
@@ -150,7 +191,12 @@ export const commentLikes = pgTable("comment_likes", {
   userId: varchar("user_id").notNull().references(() => users.id),
   isLike: boolean("is_like").notNull(), // true for like, false for dislike
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => [
+  index("IDX_comment_likes_comment_id").on(table.commentId),
+  index("IDX_comment_likes_user_id").on(table.userId),
+  index("IDX_comment_likes_comment_user").on(table.commentId, table.userId),
+  unique("UQ_comment_likes_comment_user").on(table.commentId, table.userId),
+]);
 
 // Payment transactions for SuperChat
 export const payments = pgTable("payments", {
@@ -168,7 +214,12 @@ export const payments = pgTable("payments", {
   metadata: jsonb("metadata"), // additional payment data
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => [
+  index("IDX_payments_user_id").on(table.userId),
+  index("IDX_payments_stream_id").on(table.streamId),
+  index("IDX_payments_status").on(table.status),
+  index("IDX_payments_created_at").on(table.createdAt),
+]);
 
 // Superchat donations (enhanced with payment tracking)
 export const superchats = pgTable("superchats", {
@@ -185,7 +236,13 @@ export const superchats = pgTable("superchats", {
   pinnedUntil: timestamp("pinned_until"), // when the pin expires
   isProcessed: boolean("is_processed").default(false),
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => [
+  index("IDX_superchats_stream_id").on(table.streamId),
+  index("IDX_superchats_user_id").on(table.userId),
+  index("IDX_superchats_amount").on(table.amount),
+  index("IDX_superchats_created_at").on(table.createdAt),
+  index("IDX_superchats_stream_created").on(table.streamId, table.createdAt),
+]);
 
 // Video thumbnails table for thumbnail selection
 export const videoThumbnails = pgTable("video_thumbnails", {
@@ -447,7 +504,14 @@ export const playlists = pgTable("playlists", {
   totalDuration: integer("total_duration").default(0), // in seconds
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => [
+  index("IDX_playlists_user_id").on(table.userId),
+  index("IDX_playlists_is_public").on(table.isPublic),
+  index("IDX_playlists_created_at").on(table.createdAt),
+  index("IDX_playlists_user_public_created").on(table.userId, table.isPublic, table.createdAt),
+  check("CHK_playlists_video_count", sql`${table.videoCount} >= 0`),
+  check("CHK_playlists_total_duration", sql`${table.totalDuration} >= 0`),
+]);
 
 // Playlist-Video relationship table
 export const playlistVideos = pgTable("playlist_videos", {
@@ -456,7 +520,15 @@ export const playlistVideos = pgTable("playlist_videos", {
   videoId: varchar("video_id").notNull().references(() => videos.id),
   orderIndex: integer("order_index").notNull().default(0),
   addedAt: timestamp("added_at").defaultNow(),
-});
+}, (table) => [
+  index("IDX_playlist_videos_playlist_id").on(table.playlistId),
+  index("IDX_playlist_videos_video_id").on(table.videoId),
+  index("IDX_playlist_videos_order_index").on(table.orderIndex),
+  index("IDX_playlist_videos_playlist_order").on(table.playlistId, table.orderIndex),
+  index("IDX_playlist_videos_added_at").on(table.addedAt),
+  unique("UQ_playlist_videos_playlist_video").on(table.playlistId, table.videoId),
+  check("CHK_playlist_videos_order_index", sql`${table.orderIndex} >= 0`),
+]);
 
 // Channel Analytics table for dashboard metrics
 export const channelAnalytics = pgTable("channel_analytics", {
@@ -481,7 +553,19 @@ export const channelAnalytics = pgTable("channel_analytics", {
   dailyRevenue: integer("daily_revenue").default(0),
   totalRevenue: integer("total_revenue").default(0),
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => [
+  index("IDX_channel_analytics_user_id").on(table.userId),
+  index("IDX_channel_analytics_date").on(table.date),
+  index("IDX_channel_analytics_user_date").on(table.userId, table.date),
+  index("IDX_channel_analytics_created_at").on(table.createdAt),
+  unique("UQ_channel_analytics_user_date").on(table.userId, table.date),
+  check("CHK_channel_analytics_subscriber_count", sql`${table.subscriberCount} >= 0`),
+  check("CHK_channel_analytics_total_views", sql`${table.totalViews} >= 0`),
+  check("CHK_channel_analytics_daily_views", sql`${table.dailyViews} >= 0`),
+  check("CHK_channel_analytics_watch_time", sql`${table.totalWatchTime} >= 0 AND ${table.dailyWatchTime} >= 0`),
+  check("CHK_channel_analytics_engagement", sql`${table.likesCount} >= 0 AND ${table.commentsCount} >= 0 AND ${table.sharesCount} >= 0`),
+  check("CHK_channel_analytics_revenue", sql`${table.dailyRevenue} >= 0 AND ${table.totalRevenue} >= 0`),
+]);
 
 // View Sessions table for detailed analytics
 export const viewSessions = pgTable("view_sessions", {
@@ -511,7 +595,23 @@ export const viewSessions = pgTable("view_sessions", {
   shared: boolean("shared").default(false),
   subscribedAfter: boolean("subscribed_after").default(false),
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => [
+  index("IDX_view_sessions_video_id").on(table.videoId),
+  index("IDX_view_sessions_stream_id").on(table.streamId),
+  index("IDX_view_sessions_user_id").on(table.userId),
+  index("IDX_view_sessions_session_id").on(table.sessionId),
+  index("IDX_view_sessions_created_at").on(table.createdAt),
+  index("IDX_view_sessions_country").on(table.country),
+  index("IDX_view_sessions_device_type").on(table.deviceType),
+  index("IDX_view_sessions_traffic_source").on(table.trafficSource),
+  index("IDX_view_sessions_video_created").on(table.videoId, table.createdAt),
+  index("IDX_view_sessions_stream_created").on(table.streamId, table.createdAt),
+  check("CHK_view_sessions_watch_time", sql`${table.watchTime} >= 0`),
+  check("CHK_view_sessions_view_duration", sql`${table.viewDuration} >= 0`),
+  check("CHK_view_sessions_completion_rate", sql`${table.completionRate} >= 0 AND ${table.completionRate} <= 100`),
+  check("CHK_view_sessions_content_exists", sql`(${table.videoId} IS NOT NULL) OR (${table.streamId} IS NOT NULL)`),
+  check("CHK_view_sessions_device_type", sql`${table.deviceType} IN ('mobile', 'desktop', 'tablet', 'tv') OR ${table.deviceType} IS NULL`),
+]);
 
 // Channel Settings table for customization
 export const channelSettings = pgTable("channel_settings", {
@@ -546,7 +646,15 @@ export const channelSettings = pgTable("channel_settings", {
   subscriptionNotifications: boolean("subscription_notifications").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => [
+  index("IDX_channel_settings_user_id").on(table.userId),
+  index("IDX_channel_settings_channel_name").on(table.channelName),
+  index("IDX_channel_settings_default_privacy").on(table.defaultPrivacy),
+  index("IDX_channel_settings_monetization").on(table.monetizationEnabled),
+  index("IDX_channel_settings_created_at").on(table.createdAt),
+  unique("UQ_channel_settings_user_id").on(table.userId),
+  check("CHK_channel_settings_default_privacy", sql`${table.defaultPrivacy} IN ('public', 'unlisted', 'private')`),
+]);
 
 // Revenue Reports table for monetization management
 export const revenueReports = pgTable("revenue_reports", {
@@ -575,7 +683,20 @@ export const revenueReports = pgTable("revenue_reports", {
   monetizedViews: integer("monetized_views").default(0),
   rpm: integer("rpm").default(0), // Revenue per mille (per 1000 views)
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => [
+  index("IDX_revenue_reports_user_id").on(table.userId),
+  index("IDX_revenue_reports_report_month").on(table.reportMonth),
+  index("IDX_revenue_reports_payment_status").on(table.paymentStatus),
+  index("IDX_revenue_reports_payment_date").on(table.paymentDate),
+  index("IDX_revenue_reports_created_at").on(table.createdAt),
+  index("IDX_revenue_reports_user_month").on(table.userId, table.reportMonth),
+  unique("UQ_revenue_reports_user_month").on(table.userId, table.reportMonth),
+  check("CHK_revenue_reports_revenue", sql`${table.adRevenue} >= 0 AND ${table.superchatRevenue} >= 0 AND ${table.membershipRevenue} >= 0 AND ${table.otherRevenue} >= 0 AND ${table.totalRevenue} >= 0`),
+  check("CHK_revenue_reports_fees", sql`${table.platformFee} >= 0 AND ${table.processingFee} >= 0`),
+  check("CHK_revenue_reports_views", sql`${table.totalViews} >= 0 AND ${table.monetizedViews} >= 0 AND ${table.monetizedViews} <= ${table.totalViews}`),
+  check("CHK_revenue_reports_payment_status", sql`${table.paymentStatus} IN ('pending', 'paid', 'failed')`),
+  check("CHK_revenue_reports_rpm", sql`${table.rpm} >= 0`),
+]);
 
 // Content Performance table for detailed video analytics
 export const contentPerformance = pgTable("content_performance", {
@@ -607,7 +728,25 @@ export const contentPerformance = pgTable("content_performance", {
   retentionRate75: integer("retention_rate_75").default(0),
   retentionRate100: integer("retention_rate_100").default(0),
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => [
+  index("IDX_content_performance_video_id").on(table.videoId),
+  index("IDX_content_performance_stream_id").on(table.streamId),
+  index("IDX_content_performance_date").on(table.date),
+  index("IDX_content_performance_created_at").on(table.createdAt),
+  index("IDX_content_performance_video_date").on(table.videoId, table.date),
+  index("IDX_content_performance_stream_date").on(table.streamId, table.date),
+  index("IDX_content_performance_views").on(table.views),
+  unique("UQ_content_performance_video_date").on(table.videoId, table.date),
+  unique("UQ_content_performance_stream_date").on(table.streamId, table.date),
+  check("CHK_content_performance_content_exists", sql`(${table.videoId} IS NOT NULL) OR (${table.streamId} IS NOT NULL)`),
+  check("CHK_content_performance_views", sql`${table.views} >= 0 AND ${table.uniqueViews} >= 0 AND ${table.uniqueViews} <= ${table.views}`),
+  check("CHK_content_performance_time_metrics", sql`${table.watchTime} >= 0 AND ${table.averageViewDuration} >= 0`),
+  check("CHK_content_performance_engagement", sql`${table.likes} >= 0 AND ${table.dislikes} >= 0 AND ${table.comments} >= 0 AND ${table.shares} >= 0`),
+  check("CHK_content_performance_impressions", sql`${table.impressions} >= 0`),
+  check("CHK_content_performance_ctr", sql`${table.clickThroughRate} >= 0 AND ${table.clickThroughRate} <= 10000`),
+  check("CHK_content_performance_traffic", sql`${table.searchTraffic} >= 0 AND ${table.suggestedTraffic} >= 0 AND ${table.directTraffic} >= 0 AND ${table.externalTraffic} >= 0`),
+  check("CHK_content_performance_retention", sql`${table.retentionRate25} >= 0 AND ${table.retentionRate50} >= 0 AND ${table.retentionRate75} >= 0 AND ${table.retentionRate100} >= 0 AND ${table.retentionRate25} <= 10000 AND ${table.retentionRate50} <= 10000 AND ${table.retentionRate75} <= 10000 AND ${table.retentionRate100} <= 10000`),
+]);
 
 // Copyright reports table (일반 사용자가 제출하는 저작권 신고)
 export const copyrightReports = pgTable("copyright_reports", {
@@ -626,7 +765,21 @@ export const copyrightReports = pgTable("copyright_reports", {
   reviewerNotes: text("reviewer_notes"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => [
+  index("IDX_copyright_reports_reporter_id").on(table.reporterId),
+  index("IDX_copyright_reports_video_id").on(table.videoId),
+  index("IDX_copyright_reports_stream_id").on(table.streamId),
+  index("IDX_copyright_reports_status").on(table.status),
+  index("IDX_copyright_reports_claim_type").on(table.claimType),
+  index("IDX_copyright_reports_created_at").on(table.createdAt),
+  index("IDX_copyright_reports_reviewed_at").on(table.reviewedAt),
+  index("IDX_copyright_reports_video_status").on(table.videoId, table.status),
+  index("IDX_copyright_reports_stream_status").on(table.streamId, table.status),
+  check("CHK_copyright_reports_content_exists", sql`(${table.videoId} IS NOT NULL) OR (${table.streamId} IS NOT NULL)`),
+  check("CHK_copyright_reports_claim_type", sql`${table.claimType} IN ('music', 'video', 'image', 'other')`),
+  check("CHK_copyright_reports_rights_owner_type", sql`${table.rightsOwnerType} IN ('myself', 'representative')`),
+  check("CHK_copyright_reports_status", sql`${table.status} IN ('pending', 'reviewed', 'approved', 'rejected')`),
+]);
 
 // Insert schemas for new tables
 export const insertPlaylistSchema = createInsertSchema(playlists);
