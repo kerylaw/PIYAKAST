@@ -13,6 +13,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/hooks/useAuth";
 import UploadModal from "./UploadModal";
+import LiveStreamModal from "./LiveStreamModal";
+import CloudflareLiveModal from "./CloudflareLiveModal";
 
 interface HeaderProps {
   onMobileMenuToggle?: () => void;
@@ -21,6 +23,8 @@ interface HeaderProps {
 export default function Header({ onMobileMenuToggle }: HeaderProps) {
   const { user, isAuthenticated } = useAuth();
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [showLiveStreamModal, setShowLiveStreamModal] = useState(false);
+  const [showCloudflareLiveModal, setShowCloudflareLiveModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
   const handleSearch = (e: React.FormEvent) => {
@@ -73,8 +77,8 @@ export default function Header({ onMobileMenuToggle }: HeaderProps) {
               {isAuthenticated ? (
                 <>
                   <Button
-                    onClick={() => setShowUploadModal(true)}
-                    className="hidden md:flex items-center space-x-2 bg-primary-purple hover:bg-purple-700"
+                    onClick={() => setShowCloudflareLiveModal(true)}
+                    className="hidden md:flex items-center space-x-2 bg-live-red hover:bg-red-700"
                     data-testid="button-go-live"
                   >
                     <Video className="h-4 w-4" />
@@ -100,6 +104,10 @@ export default function Header({ onMobileMenuToggle }: HeaderProps) {
                       <DropdownMenuItem onClick={() => setShowUploadModal(true)} data-testid="button-upload-video">
                         <Upload className="mr-2 h-4 w-4" />
                         <span>Upload Video</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setShowCloudflareLiveModal(true)} data-testid="button-go-live-menu">
+                        <Video className="mr-2 h-4 w-4" />
+                        <span>Go Live</span>
                       </DropdownMenuItem>
                       <DropdownMenuItem>
                         <Settings className="mr-2 h-4 w-4" />
@@ -128,6 +136,8 @@ export default function Header({ onMobileMenuToggle }: HeaderProps) {
       </header>
 
       <UploadModal open={showUploadModal} onOpenChange={setShowUploadModal} />
+      <LiveStreamModal isOpen={showLiveStreamModal} onClose={() => setShowLiveStreamModal(false)} />
+      <CloudflareLiveModal isOpen={showCloudflareLiveModal} onClose={() => setShowCloudflareLiveModal(false)} />
     </>
   );
 }

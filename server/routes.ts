@@ -141,6 +141,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Create Cloudflare stream
+  app.post('/api/streams/cloudflare', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { title, description, category } = req.body;
+      
+      const streamData = insertStreamSchema.parse({
+        title,
+        description: description || "",
+        category: category || "General",
+        userId,
+      });
+
+      const stream = await storage.createStream(streamData);
+
+      // Generate mock Cloudflare RTMP credentials
+      // In production, use actual Cloudflare Stream API
+      const streamKey = `cf_${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`;
+      const rtmpUrl = `rtmps://live.cloudflarestream.com/live/`;
+
+      res.json({
+        streamId: stream.id,
+        streamKey,
+        rtmpUrl,
+        playbackUrl: `/stream/${stream.id}`,
+      });
+    } catch (error) {
+      console.error("Error creating Cloudflare stream:", error);
+      res.status(500).json({ message: "Failed to create Cloudflare stream" });
+    }
+  });
+
   app.patch('/api/streams/:id/status', isAuthenticated, async (req: any, res) => {
     try {
       const { isLive, viewerCount } = req.body;
