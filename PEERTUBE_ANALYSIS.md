@@ -56,18 +56,14 @@ live:
 ```
 **해결책**: `enabled: true`로 변경 필요
 
-### 2. PIYAKast 설정 불일치
-현재 PIYAKast 설정:
+### 2. PIYAKast 설정 수정됨
+PIYAKast 설정 (수정됨):
 ```typescript
-url: 'http://127.0.0.1:9000'  // 틀림
-username: 'kery73'            // 틀림
+url: 'http://127.0.0.1:9000'  // 로컬 PeerTube 서버
+username: 'root'              // 관리자 계정
 ```
 
-실제 PeerTube 설정:
-```typescript
-url: 'https://cast.piyak.kr'  // 올바름
-username: 'root'              // 올바름
-```
+참고: cast.piyak.kr는 PIYAKast 웹앱의 도메인이며, PeerTube는 로컬에서 실행됩니다.
 
 ### 3. RTMP URL 설정 오류
 PIYAKast에서 RTMP URL을 잘못 생성하고 있음

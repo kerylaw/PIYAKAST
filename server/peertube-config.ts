@@ -2,7 +2,7 @@ import { PeerTubeConfig } from './peertube';
 
 // PeerTube configuration
 export const peertubeConfig: PeerTubeConfig = {
-  url: 'https://cast.piyak.kr', // Production PeerTube instance
+  url: 'http://127.0.0.1:9000', // Local PeerTube instance
   username: 'root', // Admin username from config
   password: 'Yoyeom75!'
 };
