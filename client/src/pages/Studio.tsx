@@ -33,6 +33,9 @@ import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/hooks/useAuth";
 import VideoUpload from "@/components/VideoUpload";
+import PlaylistManagement from "@/components/PlaylistManagement";
+import CommentManagement from "@/components/CommentManagement";
+import CopyrightManagement from "@/components/CopyrightManagement";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 export default function Studio() {
@@ -171,22 +174,34 @@ export default function Studio() {
 
         {/* Main Content Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-4 bg-card-bg">
+          <TabsList className="grid w-full grid-cols-7 bg-card-bg">
             <TabsTrigger value="overview" data-testid="tab-overview">
-              <BarChart3 className="h-4 w-4 mr-2" />
+              <BarChart3 className="h-4 w-4 mr-1" />
               개요
             </TabsTrigger>
             <TabsTrigger value="content" data-testid="tab-content">
-              <Video className="h-4 w-4 mr-2" />
-              콘텐츠 관리
+              <Video className="h-4 w-4 mr-1" />
+              콘텐츠
             </TabsTrigger>
             <TabsTrigger value="analytics" data-testid="tab-analytics">
-              <TrendingUp className="h-4 w-4 mr-2" />
-              채널 분석
+              <TrendingUp className="h-4 w-4 mr-1" />
+              분석
             </TabsTrigger>
             <TabsTrigger value="monetization" data-testid="tab-monetization">
-              <DollarSign className="h-4 w-4 mr-2" />
-              수익 관리
+              <DollarSign className="h-4 w-4 mr-1" />
+              수익
+            </TabsTrigger>
+            <TabsTrigger value="playlists" data-testid="tab-playlists">
+              <List className="h-4 w-4 mr-1" />
+              플레이리스트
+            </TabsTrigger>
+            <TabsTrigger value="comments" data-testid="tab-comments">
+              <MessageSquare className="h-4 w-4 mr-1" />
+              댓글
+            </TabsTrigger>
+            <TabsTrigger value="copyright" data-testid="tab-copyright">
+              <Shield className="h-4 w-4 mr-1" />
+              저작권
             </TabsTrigger>
           </TabsList>
 
@@ -277,15 +292,30 @@ export default function Studio() {
                       <Upload className="h-4 w-4 mr-2" />
                       동영상 업로드
                     </Button>
-                    <Button className="w-full justify-start" variant="outline" data-testid="button-manage-playlists">
+                    <Button 
+                      onClick={() => setActiveTab("playlists")}
+                      className="w-full justify-start" 
+                      variant="outline" 
+                      data-testid="button-manage-playlists"
+                    >
                       <List className="h-4 w-4 mr-2" />
                       플레이리스트 관리
                     </Button>
-                    <Button className="w-full justify-start" variant="outline" data-testid="button-manage-comments">
+                    <Button 
+                      onClick={() => setActiveTab("comments")}
+                      className="w-full justify-start" 
+                      variant="outline" 
+                      data-testid="button-manage-comments"
+                    >
                       <MessageSquare className="h-4 w-4 mr-2" />
                       댓글 관리
                     </Button>
-                    <Button className="w-full justify-start" variant="outline" data-testid="button-copyright-management">
+                    <Button 
+                      onClick={() => setActiveTab("copyright")}
+                      className="w-full justify-start" 
+                      variant="outline" 
+                      data-testid="button-copyright-management"
+                    >
                       <Shield className="h-4 w-4 mr-2" />
                       저작권 관리
                     </Button>
@@ -365,13 +395,13 @@ export default function Studio() {
                     </div>
                     <div className="text-center p-3 bg-gray-800/50 rounded">
                       <div className="text-2xl font-bold text-purple-400">
-                        {Math.floor(totalViews / 60).toLocaleString()}
+                        {Math.floor(totalViews / 60) > 0 ? `${Math.floor(totalViews / 60).toLocaleString()}시간` : `${totalViews}분`}
                       </div>
-                      <div className="text-sm text-gray-400">시간 시청</div>
+                      <div className="text-sm text-gray-400">총 시청시간</div>
                     </div>
                     <div className="text-center p-3 bg-gray-800/50 rounded">
                       <div className="text-2xl font-bold text-orange-400">
-                        {((analyticsData as any)?.weeklyComments || 0) > 0 ? Math.min(Math.floor(((analyticsData as any)?.weeklyComments / totalViews) * 10000), 100) : 0}%
+                        {((analyticsData as any)?.weeklyComments || 0) > 0 ? Math.min(Math.floor(((analyticsData as any)?.weeklyComments / Math.max(totalViews, 1)) * 100), 100) : 0}%
                       </div>
                       <div className="text-sm text-gray-400">참여율</div>
                     </div>
@@ -604,6 +634,21 @@ export default function Studio() {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Playlists Management Tab */}
+          <TabsContent value="playlists" className="mt-6">
+            <PlaylistManagement />
+          </TabsContent>
+
+          {/* Comments Management Tab */}
+          <TabsContent value="comments" className="mt-6">
+            <CommentManagement />
+          </TabsContent>
+
+          {/* Copyright Management Tab */}
+          <TabsContent value="copyright" className="mt-6">
+            <CopyrightManagement />
           </TabsContent>
         </Tabs>
 
