@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Users, Video, Calendar, Settings, UserPlus, UserMinus } from "lucide-react";
+import { Users, Video, Calendar, Settings, UserPlus, UserMinus, BarChart3 } from "lucide-react";
 import Layout from "@/components/Layout";
 import VideoCard from "@/components/VideoCard";
 import LiveStreamCard from "@/components/LiveStreamCard";
@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { apiRequest } from "@/lib/queryClient";
 import { formatDistanceToNow } from "date-fns";
+import { useLocation } from "wouter";
 
 export default function Profile() {
   const { username } = useParams();
@@ -21,6 +22,7 @@ export default function Profile() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isFollowing, setIsFollowing] = useState(false);
+  const [, setLocation] = useLocation();
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -76,6 +78,12 @@ export default function Profile() {
     queryKey: ["/api/users", profileUser?.id, "following"],
     enabled: !!profileUser?.id && isAuthenticated,
   });
+
+  // Type-safe arrays
+  const followersArray = Array.isArray(followers) ? followers : [];
+  const followingArray = Array.isArray(following) ? following : [];
+  const videosArray = Array.isArray(userVideos) ? userVideos : [];
+  const streamsArray = Array.isArray(userStreams) ? userStreams : [];
 
   // Follow/Unfollow mutation
   const followMutation = useMutation({
@@ -200,14 +208,24 @@ export default function Profile() {
                       )}
                       
                       {isOwnProfile && (
-                        <Button
-                          variant="outline"
-                          className="border-gray-600 hover:bg-elevated"
-                          data-testid="button-edit-profile"
-                        >
-                          <Settings className="h-4 w-4 mr-2" />
-                          Edit Profile
-                        </Button>
+                        <>
+                          <Button
+                            onClick={() => setLocation("/studio")}
+                            className="bg-primary-purple hover:bg-purple-700"
+                            data-testid="button-studio"
+                          >
+                            <BarChart3 className="h-4 w-4 mr-2" />
+                            Studio
+                          </Button>
+                          <Button
+                            variant="outline"
+                            className="border-gray-600 hover:bg-elevated"
+                            data-testid="button-edit-profile"
+                          >
+                            <Settings className="h-4 w-4 mr-2" />
+                            Edit Profile
+                          </Button>
+                        </>
                       )}
                     </div>
                   </div>
@@ -215,15 +233,15 @@ export default function Profile() {
                   <div className="flex flex-wrap gap-6 text-gray-300 mb-4">
                     <div className="flex items-center" data-testid={`text-followers-count-${profileUser?.username}`}>
                       <Users className="h-5 w-5 mr-2" />
-                      {followers.length} followers
+                      {followersArray.length} followers
                     </div>
                     <div className="flex items-center" data-testid={`text-following-count-${profileUser?.username}`}>
                       <UserPlus className="h-5 w-5 mr-2" />
-                      {following.length} following
+                      {followingArray.length} following
                     </div>
                     <div className="flex items-center" data-testid={`text-videos-count-${profileUser?.username}`}>
                       <Video className="h-5 w-5 mr-2" />
-                      {userVideos.length} videos
+                      {videosArray.length} videos
                     </div>
                     <div className="flex items-center" data-testid={`text-join-date-${profileUser?.username}`}>
                       <Calendar className="h-5 w-5 mr-2" />
@@ -263,9 +281,9 @@ export default function Profile() {
                   </div>
                 ))}
               </div>
-            ) : userVideos.length > 0 ? (
+            ) : videosArray.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {userVideos.map((video: any) => (
+                {videosArray.map((video: any) => (
                   <VideoCard
                     key={video.id}
                     id={video.id}
@@ -316,17 +334,17 @@ export default function Profile() {
                   </div>
                 ))}
               </div>
-            ) : userStreams.length > 0 ? (
+            ) : streamsArray.length > 0 ? (
               <div className="space-y-6">
                 {/* Current Live Stream */}
-                {userStreams.filter((s: any) => s.isLive).length > 0 && (
+                {streamsArray.filter((s: any) => s.isLive).length > 0 && (
                   <div>
                     <h3 className="text-xl font-bold mb-4 flex items-center">
                       <div className="w-2 h-2 bg-live-red rounded-full mr-3 animate-pulse" />
                       Currently Live
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                      {userStreams
+                      {streamsArray
                         .filter((s: any) => s.isLive)
                         .map((stream: any) => (
                           <LiveStreamCard
@@ -347,11 +365,11 @@ export default function Profile() {
                 )}
 
                 {/* Past Streams */}
-                {userStreams.filter((s: any) => !s.isLive).length > 0 && (
+                {streamsArray.filter((s: any) => !s.isLive).length > 0 && (
                   <div>
                     <h3 className="text-xl font-bold mb-4">Past Streams</h3>
                     <div className="space-y-4">
-                      {userStreams
+                      {streamsArray
                         .filter((s: any) => !s.isLive)
                         .map((stream: any) => (
                           <div key={stream.id} className="bg-card-bg rounded-xl p-4 flex items-center space-x-4">

@@ -1,0 +1,29 @@
+Please create a PIYAKcast Studio on the item that appears when you press the profile. The functions of this button are as follows. Please analyze the contents well and verify the function accurately and without errors. If you need to modify the relevant db, please do it.
+
+1. Content Management Features
+Upload and manage videos: You need an interface that allows users to upload videos, edit titles, descriptions, tags, thumbnails, etc. Depending on the type of content, such as videos, shorts, and live streams, you should provide different setup options.
+
+Playlist Management: You must provide the ability to create, modify, delete playlists and change the order of the images.
+
+Copyright Management: You need a system that automatically detects copyright violations and handles objection procedures.
+
+Comment and community management: All video comments should be managed in one place, and functions such as filtering, approval, deletion, and reply writing should be provided. Community post functions may also be included.
+
+2. Channel Analysis Features
+Dashboard: You should summarize key metrics such as number of subscribers, total viewing time, views, etc. so that you can see the overall performance of the channel at a glance.
+
+Audience Analysis: It should provide demographic data such as the age, gender, region, and viewing time zone of the audience. This helps creators understand their target audience and strategize their content.
+
+Performance Analysis by Content: By analyzing views, average viewing duration, and exposure click-through rate (CTR) for each video in detail, you should be able to understand which content is effective.
+
+Traffic Source Analysis: You need the ability to analyze which path (exploration capabilities, recommended videos, search, etc.) the viewer entered the channel.
+
+3. Profit-generating management capabilities
+Revenue Generation Status: We need to show the performance of various revenue sources such as advertising revenue, membership, Super Chat, SuperThanks, etc.
+
+Revenue allocation and settlement information: Make sure to transparently show the revenue share, transaction fees, etc. and calculate the expected revenue and provide it to the creator.
+
+4. Settings and customization features
+Channel Customization: Provides the ability to change the channel's name, profile picture, banner, introduction, and more.
+
+Access to channel characteristics and functions: Depending on the growth stage of the channel, you need a system that can manage access to certain functions, such as live streaming, custom preview images, and so on.

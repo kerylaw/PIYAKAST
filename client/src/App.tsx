@@ -17,6 +17,7 @@ import LiveNow from "@/pages/LiveNow";
 import Videos from "@/pages/Videos";
 import Category from "@/pages/Category";
 import AuthPage from "@/pages/auth-page";
+import Studio from "@/pages/Studio";
 
 // Global stream heartbeat manager
 function StreamHeartbeatManager() {
@@ -116,6 +117,7 @@ function Router() {
             <Route path="/watch/:id" component={VideoWatch} />
             <Route path="/stream/:id" component={LiveStream} />
             <Route path="/profile/:username" component={Profile} />
+            <Route path="/studio" component={Studio} />
           </>
         )}
         <Route component={NotFound} />

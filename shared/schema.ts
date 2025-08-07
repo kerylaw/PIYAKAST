@@ -428,3 +428,202 @@ export type InsertCreatorSettings = z.infer<typeof insertCreatorSettingsSchema>;
 export type CreatorSettings = typeof creatorSettings.$inferSelect;
 export type InsertSubscription = z.infer<typeof insertSubscriptionSchema>;
 export type Subscription = typeof subscriptions.$inferSelect;
+
+// Playlists table for content management
+export const playlists = pgTable("playlists", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  title: text("title").notNull(),
+  description: text("description"),
+  thumbnailUrl: varchar("thumbnail_url"),
+  isPublic: boolean("is_public").default(true),
+  videoCount: integer("video_count").default(0),
+  totalDuration: integer("total_duration").default(0), // in seconds
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Playlist-Video relationship table
+export const playlistVideos = pgTable("playlist_videos", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  playlistId: varchar("playlist_id").notNull().references(() => playlists.id),
+  videoId: varchar("video_id").notNull().references(() => videos.id),
+  orderIndex: integer("order_index").notNull().default(0),
+  addedAt: timestamp("added_at").defaultNow(),
+});
+
+// Channel Analytics table for dashboard metrics
+export const channelAnalytics = pgTable("channel_analytics", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  date: timestamp("date").notNull(),
+  // Subscriber metrics
+  subscriberCount: integer("subscriber_count").default(0),
+  subscriberChange: integer("subscriber_change").default(0),
+  // View metrics
+  totalViews: integer("total_views").default(0),
+  dailyViews: integer("daily_views").default(0),
+  // Watch time metrics (in seconds)
+  totalWatchTime: integer("total_watch_time").default(0),
+  dailyWatchTime: integer("daily_watch_time").default(0),
+  averageViewDuration: integer("average_view_duration").default(0),
+  // Engagement metrics
+  likesCount: integer("likes_count").default(0),
+  commentsCount: integer("comments_count").default(0),
+  sharesCount: integer("shares_count").default(0),
+  // Revenue metrics (in smallest currency unit - won)
+  dailyRevenue: integer("daily_revenue").default(0),
+  totalRevenue: integer("total_revenue").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// View Sessions table for detailed analytics
+export const viewSessions = pgTable("view_sessions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  videoId: varchar("video_id").references(() => videos.id),
+  streamId: varchar("stream_id").references(() => streams.id),
+  userId: varchar("user_id").references(() => users.id), // null for anonymous
+  sessionId: varchar("session_id").notNull(), // anonymous session tracking
+  // Viewer demographics
+  country: varchar("country"),
+  region: varchar("region"),
+  city: varchar("city"),
+  deviceType: varchar("device_type"), // mobile, desktop, tablet, tv
+  os: varchar("os"),
+  browser: varchar("browser"),
+  // View metrics
+  watchTime: integer("watch_time").default(0), // in seconds
+  viewDuration: integer("view_duration").default(0), // in seconds
+  completionRate: integer("completion_rate").default(0), // percentage 0-100
+  // Traffic source
+  trafficSource: varchar("traffic_source"), // search, suggested, direct, external, etc.
+  referrer: varchar("referrer"),
+  searchKeyword: varchar("search_keyword"),
+  // Engagement
+  liked: boolean("liked").default(false),
+  commented: boolean("commented").default(false),
+  shared: boolean("shared").default(false),
+  subscribedAfter: boolean("subscribed_after").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Channel Settings table for customization
+export const channelSettings = pgTable("channel_settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  // Channel branding
+  channelName: varchar("channel_name"),
+  channelDescription: text("channel_description"),
+  bannerUrl: varchar("banner_url"),
+  logoUrl: varchar("logo_url"),
+  channelTrailerVideoId: varchar("channel_trailer_video_id").references(() => videos.id),
+  // Channel links and social media
+  websiteUrl: varchar("website_url"),
+  twitterHandle: varchar("twitter_handle"),
+  instagramHandle: varchar("instagram_handle"),
+  facebookUrl: varchar("facebook_url"),
+  // Content settings
+  defaultCategory: varchar("default_category"),
+  defaultPrivacy: varchar("default_privacy").default("public"),
+  autoTranslate: boolean("auto_translate").default(false),
+  // Monetization settings
+  monetizationEnabled: boolean("monetization_enabled").default(false),
+  superchatEnabled: boolean("superchat_enabled").default(false),
+  membershipEnabled: boolean("membership_enabled").default(false),
+  // Analytics settings
+  publicStats: boolean("public_stats").default(true),
+  commentsEnabled: boolean("comments_enabled").default(true),
+  ratingsEnabled: boolean("ratings_enabled").default(true),
+  // Notification settings
+  emailNotifications: boolean("email_notifications").default(true),
+  commentNotifications: boolean("comment_notifications").default(true),
+  subscriptionNotifications: boolean("subscription_notifications").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Revenue Reports table for monetization management
+export const revenueReports = pgTable("revenue_reports", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  reportMonth: varchar("report_month").notNull(), // YYYY-MM format
+  // Revenue breakdown (in smallest currency unit - won)
+  adRevenue: integer("ad_revenue").default(0),
+  superchatRevenue: integer("superchat_revenue").default(0),
+  membershipRevenue: integer("membership_revenue").default(0),
+  otherRevenue: integer("other_revenue").default(0),
+  totalRevenue: integer("total_revenue").default(0),
+  // Platform fees and cuts
+  platformFee: integer("platform_fee").default(0),
+  processingFee: integer("processing_fee").default(0),
+  netRevenue: integer("net_revenue").default(0),
+  // Tax information
+  taxWithheld: integer("tax_withheld").default(0),
+  taxableAmount: integer("taxable_amount").default(0),
+  // Payment status
+  paymentStatus: varchar("payment_status").default("pending"), // pending, paid, failed
+  paymentDate: timestamp("payment_date"),
+  paymentMethod: varchar("payment_method"),
+  // Metrics for the period
+  totalViews: integer("total_views").default(0),
+  monetizedViews: integer("monetized_views").default(0),
+  rpm: integer("rpm").default(0), // Revenue per mille (per 1000 views)
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Content Performance table for detailed video analytics
+export const contentPerformance = pgTable("content_performance", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  videoId: varchar("video_id").references(() => videos.id),
+  streamId: varchar("stream_id").references(() => streams.id),
+  date: timestamp("date").notNull(),
+  // Basic metrics
+  views: integer("views").default(0),
+  uniqueViews: integer("unique_views").default(0),
+  watchTime: integer("watch_time").default(0), // in seconds
+  averageViewDuration: integer("average_view_duration").default(0),
+  // Engagement metrics
+  likes: integer("likes").default(0),
+  dislikes: integer("dislikes").default(0),
+  comments: integer("comments").default(0),
+  shares: integer("shares").default(0),
+  // Discovery metrics
+  impressions: integer("impressions").default(0),
+  clickThroughRate: integer("click_through_rate").default(0), // percentage * 100
+  // Traffic sources
+  searchTraffic: integer("search_traffic").default(0),
+  suggestedTraffic: integer("suggested_traffic").default(0),
+  directTraffic: integer("direct_traffic").default(0),
+  externalTraffic: integer("external_traffic").default(0),
+  // Audience retention
+  retentionRate25: integer("retention_rate_25").default(0), // percentage * 100
+  retentionRate50: integer("retention_rate_50").default(0),
+  retentionRate75: integer("retention_rate_75").default(0),
+  retentionRate100: integer("retention_rate_100").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Insert schemas for new tables
+export const insertPlaylistSchema = createInsertSchema(playlists);
+export const insertPlaylistVideoSchema = createInsertSchema(playlistVideos);
+export const insertChannelAnalyticsSchema = createInsertSchema(channelAnalytics);
+export const insertViewSessionSchema = createInsertSchema(viewSessions);
+export const insertChannelSettingsSchema = createInsertSchema(channelSettings);
+export const insertRevenueReportSchema = createInsertSchema(revenueReports);
+export const insertContentPerformanceSchema = createInsertSchema(contentPerformance);
+
+// Types for new tables
+export type InsertPlaylist = z.infer<typeof insertPlaylistSchema>;
+export type Playlist = typeof playlists.$inferSelect;
+export type InsertPlaylistVideo = z.infer<typeof insertPlaylistVideoSchema>;
+export type PlaylistVideo = typeof playlistVideos.$inferSelect;
+export type InsertChannelAnalytics = z.infer<typeof insertChannelAnalyticsSchema>;
+export type ChannelAnalytics = typeof channelAnalytics.$inferSelect;
+export type InsertViewSession = z.infer<typeof insertViewSessionSchema>;
+export type ViewSession = typeof viewSessions.$inferSelect;
+export type InsertChannelSettings = z.infer<typeof insertChannelSettingsSchema>;
+export type ChannelSettings = typeof channelSettings.$inferSelect;
+export type InsertRevenueReport = z.infer<typeof insertRevenueReportSchema>;
+export type RevenueReport = typeof revenueReports.$inferSelect;
+export type InsertContentPerformance = z.infer<typeof insertContentPerformanceSchema>;
+export type ContentPerformance = typeof contentPerformance.$inferSelect;
