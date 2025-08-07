@@ -77,6 +77,10 @@ export default function Category() {
       ).sort((a: any, b: any) => (b.viewerCount || 0) - (a.viewerCount || 0))
     : [];
 
+  const allStreams = Array.isArray(liveStreams) 
+    ? liveStreams.sort((a: any, b: any) => (b.viewerCount || 0) - (a.viewerCount || 0))
+    : [];
+
   if (!config) {
     return (
       <Layout>
@@ -142,12 +146,15 @@ export default function Category() {
 
         {/* Content Tabs */}
         <Tabs defaultValue="videos" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 bg-card">
+          <TabsList className="grid w-full grid-cols-3 bg-card">
             <TabsTrigger value="videos" data-testid="tab-videos" className="font-medium">
               Videos ({categoryVideos.length})
             </TabsTrigger>
             <TabsTrigger value="live" data-testid="tab-live" className="font-medium">
               Live ({categoryStreams.length})
+            </TabsTrigger>
+            <TabsTrigger value="all-live" data-testid="tab-all-live" className="font-medium">
+              All Live ({allStreams.length})
             </TabsTrigger>
           </TabsList>
 
@@ -328,6 +335,98 @@ export default function Category() {
                               </span>
                             </div>
                           )}
+                        </div>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="all-live" className="mt-6">
+            {streamsLoading ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} className="bg-dark-blue rounded-lg p-4 animate-pulse">
+                    <div className="aspect-video bg-gray-700 rounded mb-3" />
+                    <div className="space-y-2">
+                      <div className="h-4 bg-gray-700 rounded w-3/4" />
+                      <div className="h-3 bg-gray-700 rounded w-1/2" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : allStreams.length === 0 ? (
+              <div className="text-center py-12">
+                <Radio className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-xl font-semibold text-foreground mb-2">
+                  No live streams
+                </h3>
+                <p className="text-muted-foreground">
+                  No one is streaming right now. Be the first to go live!
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {allStreams.map((stream: any) => (
+                  <Link 
+                    key={stream.id} 
+                    href={`/stream/${stream.id}`}
+                    className="group"
+                    data-testid={`link-stream-${stream.id}`}
+                  >
+                    <div className="bg-card rounded-lg overflow-hidden border border-border hover:border-red-500 transition-colors">
+                      <div className="relative aspect-video bg-muted">
+                        {stream.thumbnailUrl ? (
+                          <img 
+                            src={stream.thumbnailUrl} 
+                            alt={stream.title}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <Radio className="h-12 w-12 text-muted-foreground" />
+                          </div>
+                        )}
+                        <div className="absolute top-2 left-2">
+                          <Badge variant="destructive" className="text-xs animate-pulse">
+                            <div className="w-2 h-2 bg-white rounded-full mr-1" />
+                            LIVE
+                          </Badge>
+                        </div>
+                        <div className="absolute top-2 right-2 bg-black bg-opacity-75 text-white text-xs px-2 py-1 rounded flex items-center space-x-1">
+                          <Eye className="h-3 w-3" />
+                          <span>{stream.viewerCount || 0}</span>
+                        </div>
+                      </div>
+                      <div className="p-4">
+                        <h3 className="font-semibold text-foreground group-hover:text-red-500 transition-colors mb-2 line-clamp-2">
+                          {stream.title}
+                        </h3>
+                        <div className="flex items-center space-x-2 mb-2">
+                          <Avatar className="w-6 h-6">
+                            <AvatarImage 
+                              src={stream.user?.profileImageUrl} 
+                              alt={stream.user?.username || 'User'} 
+                            />
+                            <AvatarFallback className="text-xs">
+                              {(stream.user?.username || 'U')[0].toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="text-sm text-muted-foreground truncate">
+                            {stream.user?.username}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                          <div className="flex items-center space-x-1">
+                            <Users className="h-3 w-3" />
+                            <span>{stream.viewerCount || 0} viewers</span>
+                          </div>
+                          <div className="flex items-center space-x-1">
+                            <Hash className="h-3 w-3" />
+                            <span>{stream.category}</span>
+                          </div>
                         </div>
                       </div>
                     </div>

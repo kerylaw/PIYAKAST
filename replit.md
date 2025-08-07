@@ -8,6 +8,14 @@ The application is built as a full-stack web platform with modern technologies, 
 
 ## Recent Changes (January 2025)
 
+✓ **방송 중 네비게이션 시스템 구현 (2025-08-07)**:
+  - 활성 스트림 감지 시 "Go Live" 버튼을 "Go Back" 버튼으로 자동 변경 (연한 파란색 배경)
+  - 방송 중에도 사이트 모든 페이지 이동 가능 (방송 중단 없음)
+  - 사용자별 스트림 API 엔드포인트 추가 (/api/streams/user/:userId)
+  - Category 페이지에 3개 탭 추가: 비디오, 해당 카테고리 라이브, 모든 라이브
+  - 방송 중인 스트리머가 카테고리 이동 시 자신의 방송도 목록에 표시
+  - "Go Back" 버튼으로 언제든 진행 중인 방송으로 복귀 가능
+
 ✓ **실시간 스트림 모니터링 시스템 구현 (2025-08-07)**:
   - WebSocket 기반 하트비트 시스템으로 실제 활성 스트림만 표시
   - 30초 동안 비활성화된 스트림을 자동으로 오프라인 처리

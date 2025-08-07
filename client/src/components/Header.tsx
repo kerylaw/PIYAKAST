@@ -39,7 +39,7 @@ export default function Header({ onMobileMenuToggle }: HeaderProps) {
     ? userStreams.find((stream: any) => stream.isLive && stream.isPublic)
     : null;
 
-  const isOnStreamPage = location.startsWith('/stream/');
+  const isOnStreamPage = location.startsWith('/stream/') && location.includes(activeStream?.id || '');
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -93,14 +93,14 @@ export default function Header({ onMobileMenuToggle }: HeaderProps) {
                   {activeStream && !isOnStreamPage ? (
                     <Link href={`/stream/${activeStream.id}`}>
                       <Button
-                        className="hidden md:flex items-center space-x-2 bg-green-600 hover:bg-green-700"
+                        className="hidden md:flex items-center space-x-2 bg-blue-500 hover:bg-blue-600"
                         data-testid="button-go-back"
                       >
                         <ArrowLeft className="h-4 w-4" />
                         <span>Go Back</span>
                       </Button>
                     </Link>
-                  ) : (
+                  ) : !activeStream ? (
                     <Button
                       onClick={() => setShowLiveStreamModal(true)}
                       className="hidden md:flex items-center space-x-2 bg-live-red hover:bg-red-700"
@@ -109,7 +109,7 @@ export default function Header({ onMobileMenuToggle }: HeaderProps) {
                       <Video className="h-4 w-4" />
                       <span>Go Live</span>
                     </Button>
-                  )}
+                  ) : null}
 
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
