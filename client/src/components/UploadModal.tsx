@@ -39,7 +39,29 @@ export default function UploadModal({ open, onOpenChange }: UploadModalProps) {
 
   const uploadMutation = useMutation({
     mutationFn: async (formData: FormData) => {
-      return await apiRequest("POST", "/api/videos", formData);
+      return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        
+        xhr.addEventListener("load", () => {
+          if (xhr.status === 200 || xhr.status === 201) {
+            resolve(JSON.parse(xhr.responseText));
+          } else {
+            try {
+              const errorData = JSON.parse(xhr.responseText);
+              reject(new Error(errorData.message || "Upload failed"));
+            } catch {
+              reject(new Error("Upload failed"));
+            }
+          }
+        });
+
+        xhr.addEventListener("error", () => {
+          reject(new Error("Upload failed"));
+        });
+
+        xhr.open("POST", "/api/videos");
+        xhr.send(formData);
+      });
     },
     onSuccess: () => {
       toast({
