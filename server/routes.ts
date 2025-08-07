@@ -23,7 +23,7 @@ import { promisify } from "util";
 
 // Initialize Stripe
 const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: "2023-10-16",
+  apiVersion: "2025-07-30.basil",
 }) : null;
 import multer from "multer";
 import path from "path";
@@ -155,16 +155,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "No video file provided" });
       }
 
-      // Basic video data without PeerTube columns
-      const videoData: any = {
+      // Try to upload to PeerTube first
+      let videoData: any = {
         title: req.body.title,
         description: req.body.description || '',
         category: req.body.category || 'Entertainment',
         userId,
-        videoUrl: `/uploads/${req.file.filename}`,
+        videoUrl: `/uploads/${req.file.filename}`, // fallback to local
         isPublic: req.body.isPublic === 'true',
         viewCount: 0,
       };
+
+      try {
+        const client = getPeerTubeClient();
+        
+        // Get user's channel (assuming first channel for now)
+        const channels = await client.getChannels();
+        const channelId = channels[0]?.id;
+        
+        if (!channelId) {
+          throw new Error('No PeerTube channel found');
+        }
+
+        // Map category to PeerTube category
+        const category = peertubeCategories[req.body.category as keyof typeof peertubeCategories] || 9; // default to Entertainment
+        
+        // Upload to PeerTube
+        const peertubeVideo = await client.uploadVideo(req.file.path, {
+          channelId,
+          name: req.body.title,
+          description: req.body.description || '',
+          category,
+          privacy: peertubePrivacy.PUBLIC,
+          language: 'ko', // Korean
+          nsfw: false,
+          tags: req.body.category ? [req.body.category] : []
+        });
+
+        // Update video data with PeerTube information (only add fields that exist in schema)
+        videoData = {
+          ...videoData,
+          videoUrl: peertubeVideo.embedUrl, // Use PeerTube embed URL
+          thumbnailUrl: peertubeVideo.thumbnailUrl,
+          duration: peertubeVideo.duration,
+        };
+
+        console.log('✅ Video uploaded to PeerTube:', peertubeVideo.name);
+        
+        // Clean up local file
+        try {
+          fs.unlinkSync(req.file.path);
+        } catch (err: any) {
+          console.warn('Failed to delete local file:', err);
+        }
+        
+      } catch (peertubeError: any) {
+        console.warn('⚠️ PeerTube upload failed, using local storage:', peertubeError.message);
+        // Keep the local file path in videoUrl
+      }
 
       const video = await storage.createVideo(videoData);
       res.status(201).json({ 
@@ -586,9 +634,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Generate thumbnails using ffmpeg
       const thumbnails = [];
-      const videoPath = video.videoUrl.startsWith('/uploads/') 
+      const videoPath = video.videoUrl?.startsWith('/uploads/') 
         ? path.join(process.cwd(), video.videoUrl)
         : video.videoUrl;
+      
+      if (!videoPath) {
+        return res.status(400).json({ message: "Video file not found" });
+      }
       
       if (fs.existsSync(videoPath)) {
         // Generate thumbnails at different time intervals
@@ -605,7 +657,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           try {
             // Use ffmpeg to extract thumbnail
-            await new Promise((resolve, reject) => {
+            await new Promise<void>((resolve, reject) => {
               const ffmpeg = spawn('ffmpeg', [
                 '-i', videoPath,
                 '-ss', interval.toString(),
@@ -615,8 +667,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 thumbnailPath
               ]);
               
-              ffmpeg.on('close', (code) => {
-                if (code === 0) resolve(null);
+              ffmpeg.on('close', (code: number | null) => {
+                if (code === 0) resolve();
                 else reject(new Error(`ffmpeg failed with code ${code}`));
               });
               
@@ -706,14 +758,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       });
       
-      // Create payment record in database
+      // Create payment record in database (only with existing fields)
       await storage.createPayment({
         userId,
         streamId,
         stripePaymentIntentId: paymentIntent.id,
         amount,
         currency,
-        type: 'superchat',
         status: 'pending',
       });
       
@@ -757,7 +808,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const tier = tiers.find(t => amount >= t.min && amount <= t.max) || tiers[0];
       const pinnedUntil = new Date(Date.now() + tier.duration * 1000);
       
-      // Create SuperChat record
+      // Create SuperChat record (only with existing fields)
       const superchat = await storage.createSuperchat({
         streamId,
         userId,
@@ -767,9 +818,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         currency: 'KRW',
         color: tier.color,
         displayDuration: tier.duration,
-        isPinned: true,
-        pinnedUntil,
       });
+      
+      // Update SuperChat pin status separately
+      await storage.updateSuperchatPin(superchat.id, true, pinnedUntil);
       
       // Broadcast SuperChat to stream viewers via WebSocket
       const superchatData = {
