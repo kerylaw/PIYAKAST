@@ -272,7 +272,8 @@ export default function AdminPage() {
     return new Intl.NumberFormat('ko-KR', { style: 'currency', currency: 'KRW' }).format(amount);
   };
 
-  if (!user || user.role !== 'admin') {
+  // 임시로 admin@piyakast.kr 사용자는 관리자 권한 허용 (role 필드 문제 해결 전까지)
+  if (!user || (user.role !== 'admin' && user.email !== 'admin@piyakast.kr')) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-red-900 via-red-800 to-black flex items-center justify-center">
         <Card className="max-w-md w-full mx-4 bg-red-950/50 border-red-700">
