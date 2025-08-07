@@ -337,29 +337,37 @@ export default function LiveStreamViewer({
                 No messages yet. Be the first to chat!
               </p>
             ) : (
-              chatMessages.map((msg) => (
-                <div key={msg.id} className="flex space-x-2">
-                  <Avatar className="w-6 h-6">
-                    <AvatarImage src={msg.profileImageUrl} alt={msg.username || "User"} />
-                    <AvatarFallback className="text-xs">
-                      {msg.username?.charAt(0) || "U"}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center space-x-1">
-                      <span className="text-sm font-medium truncate">
-                        {msg.username || "Unknown User"}
-                      </span>
-                      <span className="text-xs text-gray-500">
-                        {new Date(msg.createdAt).toLocaleTimeString()}
-                      </span>
+              chatMessages.map((msg) => {
+                const isStreamerMessage = msg.userId === streamerId;
+                return (
+                  <div key={msg.id} className="flex space-x-2">
+                    <Avatar className="w-6 h-6">
+                      <AvatarImage src={msg.profileImageUrl} alt={msg.username || "User"} />
+                      <AvatarFallback className={`text-xs ${isStreamerMessage ? 'bg-red-500 text-white' : ''}`}>
+                        {msg.username?.charAt(0) || "U"}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center space-x-1">
+                        <span className={`text-sm font-medium truncate ${isStreamerMessage ? 'text-red-600 dark:text-red-400' : ''}`}>
+                          {msg.username || "Unknown User"}
+                        </span>
+                        {isStreamerMessage && (
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
+                            방장
+                          </span>
+                        )}
+                        <span className="text-xs text-gray-500">
+                          {new Date(msg.createdAt).toLocaleTimeString()}
+                        </span>
+                      </div>
+                      <p className={`text-sm break-words ${isStreamerMessage ? 'text-gray-900 dark:text-gray-100 font-medium' : 'text-gray-700 dark:text-gray-300'}`}>
+                        {msg.message}
+                      </p>
                     </div>
-                    <p className="text-sm text-gray-700 dark:text-gray-300 break-words">
-                      {msg.message}
-                    </p>
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </ScrollArea>

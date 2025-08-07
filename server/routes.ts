@@ -631,13 +631,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
               recordStreamHeartbeat(currentStreamId, streamConnections.get(currentStreamId)!.size);
             }
             
-            // Send recent chat messages
+            // Send recent chat messages with user info
             try {
               if (currentStreamId) {
                 const recentMessages = await storage.getChatMessagesByStream(currentStreamId, 20);
+                // Add user info to messages
+                const messagesWithUsers = await Promise.all(
+                  recentMessages.map(async (msg) => {
+                    const user = await storage.getUser(msg.userId);
+                    return {
+                      ...msg,
+                      username: user?.username || user?.firstName || "Unknown User",
+                      profileImageUrl: user?.profileImageUrl || null,
+                    };
+                  })
+                );
                 ws.send(JSON.stringify({
                   type: 'chat_history',
-                  messages: recentMessages.reverse(),
+                  messages: messagesWithUsers.reverse(),
                 }));
               }
             } catch (error) {
@@ -663,6 +674,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   message: data.message,
                 });
 
+                // Get user information for the message
+                const user = await storage.getUser(data.userId);
+                
+                // Create message object with user info for broadcasting
+                const messageWithUser = {
+                  ...chatMessage,
+                  username: user?.username || user?.firstName || "Unknown User",
+                  profileImageUrl: user?.profileImageUrl || null,
+                  userId: data.userId, // Make sure userId is included
+                };
+
                 // Record activity heartbeat
                 recordStreamHeartbeat(currentStreamId);
 
@@ -671,7 +693,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 if (connections) {
                   const messageData = JSON.stringify({
                     type: 'new_message',
-                    message: chatMessage,
+                    message: messageWithUser,
                   });
 
                   connections.forEach(client => {
