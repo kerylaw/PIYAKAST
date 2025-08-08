@@ -1828,10 +1828,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         companyName: req.body.companyName,
         industry: req.body.industry,
         website: req.body.website,
-        contactEmail: req.body.contactEmail,
-        contactPhone: req.body.contactPhone,
-        country: req.body.country || 'KR',
-        status: 'pending' // Requires approval
+        contactEmail: req.body.contactEmail
       });
 
       res.status(201).json(advertiser);
@@ -1863,7 +1860,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.id;
       const advertiser = await storage.getAdvertiserByUserId(userId);
       
-      if (!advertiser || advertiser.status !== 'active') {
+      if (!advertiser || !advertiser.isActive) {
         return res.status(403).json({ message: 'Active advertiser account required' });
       }
 
@@ -1871,12 +1868,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         advertiserId: advertiser.id,
         name: req.body.name,
         description: req.body.description,
+        objective: req.body.objective || 'brand_awareness',
         campaignType: req.body.campaignType || 'display',
         status: 'draft',
-        budget: parseInt(req.body.budget),
-        dailyBudget: parseInt(req.body.dailyBudget),
-        maxBidAmount: parseInt(req.body.maxBidAmount),
-        targetingOptions: JSON.stringify(req.body.targeting || {}),
+        dailyBudget: parseInt(req.body.dailyBudget || req.body.budget),
+        maxBid: parseInt(req.body.maxBid || req.body.maxBidAmount || 1000),
+        targetAudience: req.body.targeting || {},
         startDate: req.body.startDate ? new Date(req.body.startDate) : new Date(),
         endDate: req.body.endDate ? new Date(req.body.endDate) : undefined
       });
@@ -2018,15 +2015,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const creative = await storage.createAdCreative({
         campaignId,
         name: req.body.name,
-        type: req.body.type, // banner, video, native, text
-        format: req.body.format, // 300x250, 728x90, etc.
-        content: JSON.stringify(req.body.content),
+        creativeType: req.body.type || req.body.creativeType || 'image', // banner, video, native, text
+        dimensions: req.body.format ? { format: req.body.format } : undefined, // 300x250, 728x90, etc.
         imageUrl: req.body.imageUrl,
         videoUrl: req.body.videoUrl,
-        headline: req.body.headline,
+        title: req.body.headline || req.body.title,
         description: req.body.description,
-        callToAction: req.body.callToAction,
-        landingUrl: req.body.landingUrl,
+        ctaText: req.body.callToAction || req.body.ctaText,
+        ctaUrl: req.body.landingUrl || req.body.ctaUrl,
         isActive: true
       });
 
@@ -2193,10 +2189,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const defaultPreferences = await storage.createUserAdPreferences({
           userId,
           allowPersonalizedAds: true,
-          allowDataCollection: true,
-          adFrequencyPreference: 'normal',
-          categoryInterests: JSON.stringify([]),
-          blockedAdvertisers: JSON.stringify([])
+          blockedAdvertisers: []
         });
         return res.json(defaultPreferences);
       }
@@ -2258,7 +2251,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { id } = req.params;
       const { status } = req.body;
       
-      const updatedAdvertiser = await storage.updateAdvertiser(id, { status });
+      const updatedAdvertiser = await storage.updateAdvertiser(id, { isActive: status === 'active' });
       res.json(updatedAdvertiser);
     } catch (error) {
       console.error('Error updating advertiser status:', error);
@@ -2348,8 +2341,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         advertiserId: advertiser.id,
         name,
         description: description || '',
-        budget: parseInt(budget),
-        targetAudience: targetAudience || 'general',
+        objective: 'brand_awareness', // Default objective for Korean streaming platform
+        campaignType: 'display', // Default campaign type
+        dailyBudget: parseInt(budget),
+        maxBid: Math.max(parseInt(budget) * 0.1, 1000), // 10% of daily budget or minimum 1000 KRW
+        targetAudience: { audience: targetAudience || 'general' }, // JSON object
         status: 'draft' as const,
         startDate: startDate ? new Date(startDate) : new Date(),
         endDate: endDate ? new Date(endDate) : null
@@ -2402,7 +2398,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         totalClicks += metrics.totalClicks || 0;
         
         // Track category performance
-        const category = campaign.targetAudience || 'general';
+        const category = (typeof campaign.targetAudience === 'object' && campaign.targetAudience) 
+          ? (campaign.targetAudience as any).audience || 'general' 
+          : 'general';
         categoryPerformance[category] = (categoryPerformance[category] || 0) + (metrics.totalClicks || 0);
       }
       
