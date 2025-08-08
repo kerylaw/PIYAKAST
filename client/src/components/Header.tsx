@@ -164,9 +164,11 @@ export default function Header({ onMobileMenuToggle }: HeaderProps) {
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem>
-                        <Settings className="mr-2 h-4 w-4" />
-                        <span>Settings</span>
+                      <DropdownMenuItem asChild>
+                        <Link href="/settings" className="flex items-center cursor-pointer" data-testid="link-settings">
+                          <Settings className="mr-2 h-4 w-4" />
+                          <span>Settings</span>
+                        </Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={toggleTheme} data-testid="button-toggle-theme">
                         {theme === 'light' ? <Moon className="mr-2 h-4 w-4" /> : <Sun className="mr-2 h-4 w-4" />}
