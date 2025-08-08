@@ -72,10 +72,12 @@ import {
   XCircle,
   Clock,
   Globe,
-  Lock
+  Lock,
+  Home
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { formatDistanceToNow } from "date-fns";
+import { Link } from "wouter";
 
 interface AdminStats {
   totalUsers: number;
@@ -326,6 +328,17 @@ export default function AdminPage() {
                   <p className="text-purple-300 text-sm">시스템 관리 대시보드</p>
                 </div>
               </div>
+              <Link href="/">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="flex items-center space-x-2 border-yellow-400 text-yellow-400 hover:bg-yellow-400 hover:text-black"
+                  data-testid="button-home-admin"
+                >
+                  <Home className="h-4 w-4" />
+                  <span>PIYAKast 홈</span>
+                </Button>
+              </Link>
             </div>
             <div className="flex items-center space-x-4">
               <Badge variant="outline" className="border-yellow-400 text-yellow-400">

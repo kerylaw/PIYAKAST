@@ -21,8 +21,10 @@ import {
   Plus,
   Settings,
   Target,
-  Zap
+  Zap,
+  Home
 } from "lucide-react";
+import { Link } from "wouter";
 
 export default function Advertiser() {
   const { user } = useAuth();
@@ -89,10 +91,23 @@ export default function Advertiser() {
         {/* 헤더 */}
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-              광고주 대시보드
-            </h1>
-            <p className="text-gray-600 dark:text-gray-400 mt-2">
+            <div className="flex items-center space-x-4 mb-2">
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+                광고주 대시보드
+              </h1>
+              <Link href="/">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="flex items-center space-x-2 hover:bg-primary-purple hover:text-white"
+                  data-testid="button-home-advertiser"
+                >
+                  <Home className="h-4 w-4" />
+                  <span>PIYAKast 홈</span>
+                </Button>
+              </Link>
+            </div>
+            <p className="text-gray-600 dark:text-gray-400">
               PIYAKast에서 효과적인 광고 캠페인을 관리하세요
             </p>
           </div>
