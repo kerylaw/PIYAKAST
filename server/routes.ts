@@ -2270,16 +2270,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/advertiser/profile', requireAuth, async (req: any, res) => {
     try {
       const userId = req.user.id;
-      // For now, return basic user info as advertiser profile
-      const user = await storage.getUser(userId);
       
-      res.json({
-        id: user?.id,
-        companyName: user?.name || 'Your Company',
-        email: user?.email,
-        status: 'active',
-        accountType: 'advertiser'
-      });
+      // Get advertiser record from database
+      const advertiser = await storage.getAdvertiserByUserId(userId);
+      
+      if (!advertiser) {
+        // If no advertiser account exists, return user info with prompt to create
+        const user = await storage.getUser(userId);
+        return res.json({
+          id: user?.id,
+          companyName: null,
+          email: user?.email,
+          status: 'inactive',
+          accountType: 'user',
+          needsAdvertiserAccount: true
+        });
+      }
+      
+      res.json(advertiser);
     } catch (error) {
       console.error('Error fetching advertiser profile:', error);
       res.status(500).json({ message: 'Failed to fetch advertiser profile' });
@@ -2290,33 +2298,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.id;
       
-      // For now, return mock data. In a real implementation, this would fetch from campaigns table
-      const mockCampaigns = [
-        {
-          id: '1',
-          name: 'K-Beauty 신제품 캠페인',
-          budget: 100000,
-          targetAudience: 'k-beauty',
-          status: 'active',
-          spendPercentage: 65,
-          impressions: 25000,
-          clicks: 850,
-          ctr: 3.4
-        },
-        {
-          id: '2', 
-          name: 'K-Pop 팬 대상 마케팅',
-          budget: 50000,
-          targetAudience: 'k-pop',
-          status: 'paused',
-          spendPercentage: 32,
-          impressions: 12000,
-          clicks: 280,
-          ctr: 2.3
-        }
-      ];
+      // Get advertiser record
+      const advertiser = await storage.getAdvertiserByUserId(userId);
+      if (!advertiser) {
+        return res.status(403).json({ message: 'Advertiser account required' });
+      }
       
-      res.json(mockCampaigns);
+      // Fetch real campaigns from database
+      const campaigns = await storage.getAdCampaignsByAdvertiser(advertiser.id);
+      
+      // Enhance campaigns with performance metrics
+      const enhancedCampaigns = await Promise.all(
+        campaigns.map(async (campaign: any) => {
+          const metrics = await storage.getAdCampaignMetrics(campaign.id);
+          return {
+            ...campaign,
+            spendPercentage: campaign.budget > 0 ? Math.round((metrics.totalSpent / campaign.budget) * 100) : 0,
+            impressions: metrics.totalImpressions || 0,
+            clicks: metrics.totalClicks || 0,
+            ctr: metrics.totalImpressions > 0 ? ((metrics.totalClicks / metrics.totalImpressions) * 100).toFixed(2) : 0
+          };
+        })
+      );
+      
+      res.json(enhancedCampaigns);
     } catch (error) {
       console.error('Error fetching campaigns:', error);
       res.status(500).json({ message: 'Failed to fetch campaigns' });
@@ -2326,28 +2331,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/advertiser/campaigns', requireAuth, async (req: any, res) => {
     try {
       const userId = req.user.id;
-      const { name, budget, targetAudience } = req.body;
+      const { name, budget, targetAudience, description, startDate, endDate } = req.body;
       
       if (!name || !budget) {
         return res.status(400).json({ message: 'Campaign name and budget are required' });
       }
 
-      // For now, return mock created campaign. In real implementation, save to database
-      const newCampaign = {
-        id: Date.now().toString(),
+      // Get advertiser record
+      const advertiser = await storage.getAdvertiserByUserId(userId);
+      if (!advertiser) {
+        return res.status(403).json({ message: 'Advertiser account required' });
+      }
+      
+      // Create campaign in database
+      const campaignData = {
+        advertiserId: advertiser.id,
         name,
+        description: description || '',
         budget: parseInt(budget),
-        targetAudience,
-        status: 'active',
+        targetAudience: targetAudience || 'general',
+        status: 'draft' as const,
+        startDate: startDate ? new Date(startDate) : new Date(),
+        endDate: endDate ? new Date(endDate) : null
+      };
+      
+      const newCampaign = await storage.createAdCampaign(campaignData);
+      
+      res.status(201).json({
+        ...newCampaign,
         spendPercentage: 0,
         impressions: 0,
         clicks: 0,
-        ctr: 0,
-        createdAt: new Date().toISOString(),
-        userId
-      };
-      
-      res.status(201).json(newCampaign);
+        ctr: 0
+      });
     } catch (error) {
       console.error('Error creating campaign:', error);
       res.status(500).json({ message: 'Failed to create campaign' });
@@ -2358,23 +2374,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.id;
       
-      // For now, return mock statistics. In real implementation, aggregate from campaigns/ads
-      const mockStats = {
-        totalSpend: 45000,
-        totalImpressions: 85000,
-        totalClicks: 2150,
-        averageCTR: 2.8,
-        activeCampaigns: 2,
-        totalCampaigns: 3,
-        topPerformingCategory: 'K-Beauty',
-        monthlySpend: [
-          { month: 'Jan', spend: 15000 },
-          { month: 'Feb', spend: 30000 },
-          { month: 'Mar', spend: 45000 }
-        ]
+      // Get advertiser record
+      const advertiser = await storage.getAdvertiserByUserId(userId);
+      if (!advertiser) {
+        return res.status(403).json({ message: 'Advertiser account required' });
+      }
+      
+      // Calculate real statistics from database
+      const campaigns = await storage.getAdCampaignsByAdvertiser(advertiser.id);
+      const advertiserStats = await storage.getAdvertiserStats(advertiser.id);
+      
+      // Calculate totals
+      let totalSpend = 0;
+      let totalImpressions = 0;
+      let totalClicks = 0;
+      let activeCampaigns = 0;
+      const categoryPerformance: { [key: string]: number } = {};
+      
+      for (const campaign of campaigns) {
+        if (campaign.status === 'active') {
+          activeCampaigns++;
+        }
+        
+        const metrics = await storage.getAdCampaignMetrics(campaign.id);
+        totalSpend += metrics.totalSpent || 0;
+        totalImpressions += metrics.totalImpressions || 0;
+        totalClicks += metrics.totalClicks || 0;
+        
+        // Track category performance
+        const category = campaign.targetAudience || 'general';
+        categoryPerformance[category] = (categoryPerformance[category] || 0) + (metrics.totalClicks || 0);
+      }
+      
+      // Find top performing category
+      const topPerformingCategory = Object.keys(categoryPerformance).length > 0
+        ? Object.keys(categoryPerformance).reduce((a, b) => 
+            categoryPerformance[a] > categoryPerformance[b] ? a : b)
+        : 'None';
+      
+      // Calculate average CTR
+      const averageCTR = totalImpressions > 0 ? ((totalClicks / totalImpressions) * 100) : 0;
+      
+      const stats = {
+        totalSpend,
+        totalImpressions,
+        totalClicks,
+        averageCTR: parseFloat(averageCTR.toFixed(2)),
+        activeCampaigns,
+        totalCampaigns: campaigns.length,
+        topPerformingCategory,
+        monthlySpend: advertiserStats.monthlySpend || []
       };
       
-      res.json(mockStats);
+      res.json(stats);
     } catch (error) {
       console.error('Error fetching advertiser stats:', error);
       res.status(500).json({ message: 'Failed to fetch advertiser statistics' });

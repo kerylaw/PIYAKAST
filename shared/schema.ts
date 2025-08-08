@@ -599,6 +599,7 @@ export const insertMemberContentSchema = createInsertSchema(memberContent).omit(
   updatedAt: true,
 });
 
+
 // Login schemas
 export const loginSchema = z.object({
   email: z.string().email("유효한 이메일을 입력해주세요"),
@@ -655,12 +656,27 @@ export type InsertSubscriptionSettings = z.infer<typeof insertSubscriptionSettin
 export type SubscriptionSettings = typeof subscriptionSettings.$inferSelect;
 export type InsertMemberContent = z.infer<typeof insertMemberContentSchema>;
 export type MemberContent = typeof memberContent.$inferSelect;
+export type InsertAdvertiser = z.infer<typeof insertAdvertiserSchema>;
+export type Advertiser = typeof advertisers.$inferSelect;
+export type InsertAdCampaign = z.infer<typeof insertAdCampaignSchema>;
+export type AdCampaign = typeof adCampaigns.$inferSelect;
+export type InsertAdCreative = z.infer<typeof insertAdCreativeSchema>;
+export type AdCreative = typeof adCreatives.$inferSelect;
+export type InsertAdPlacement = z.infer<typeof insertAdPlacementSchema>;
+export type AdPlacement = typeof adPlacements.$inferSelect;
+export type InsertAdAuctionBid = z.infer<typeof insertAdAuctionBidSchema>;
+export type AdAuctionBid = typeof adAuctionBids.$inferSelect;
+export type InsertAdImpression = z.infer<typeof insertAdImpressionSchema>;
+export type AdImpression = typeof adImpressions.$inferSelect;
+export type InsertUserAdPreferences = z.infer<typeof insertUserAdPreferencesSchema>;
+export type UserAdPreferences = typeof userAdPreferences.$inferSelect;
 
 // ========== ADVERTISING SYSTEM ==========
 
 // Advertisers table - 광고주 관리
 export const advertisers = pgTable("advertisers", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
   companyName: varchar("company_name").notNull(),
   industry: varchar("industry"),
   contactEmail: varchar("contact_email").notNull(),
@@ -679,10 +695,12 @@ export const advertisers = pgTable("advertisers", {
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [
+  index("IDX_advertisers_user_id").on(table.userId),
   index("IDX_advertisers_industry").on(table.industry),
   index("IDX_advertisers_verified").on(table.isVerified),
   index("IDX_advertisers_active").on(table.isActive),
   index("IDX_advertisers_balance").on(table.accountBalance),
+  unique("UQ_advertisers_user_id").on(table.userId),
   check("CHK_advertisers_balance", sql`${table.accountBalance} >= 0`),
   check("CHK_advertisers_spent", sql`${table.totalSpent} >= 0`),
 ]);
@@ -948,6 +966,55 @@ export const userAdPreferences = pgTable("user_ad_preferences", {
   unique("UQ_user_ad_preferences_user").on(table.userId),
   check("CHK_user_ad_preferences_max_ads", sql`${table.maxAdsPerSession} >= 0 AND ${table.maxAdsPerSession} <= 20`),
 ]);
+
+// Advertising insert schemas
+export const insertAdvertiserSchema = createInsertSchema(advertisers).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  totalSpent: true,
+});
+
+export const insertAdCampaignSchema = createInsertSchema(adCampaigns).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  totalSpent: true,
+  totalImpressions: true,
+  totalClicks: true,
+  totalViews: true,
+});
+
+export const insertAdCreativeSchema = createInsertSchema(adCreatives).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  impressions: true,
+  clicks: true,
+  views: true,
+});
+
+export const insertAdPlacementSchema = createInsertSchema(adPlacements).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertAdAuctionBidSchema = createInsertSchema(adAuctionBids).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertAdImpressionSchema = createInsertSchema(adImpressions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertUserAdPreferencesSchema = createInsertSchema(userAdPreferences).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
 
 // Playlists table for content management
 export const playlists = pgTable("playlists", {

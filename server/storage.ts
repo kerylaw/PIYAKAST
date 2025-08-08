@@ -242,6 +242,8 @@ export interface IStorage {
   createAdCampaign(campaign: InsertAdCampaign): Promise<AdCampaign>;
   getAdCampaign(id: string): Promise<AdCampaign | undefined>;
   getAdCampaignsByAdvertiser(advertiserId: string): Promise<AdCampaign[]>;
+  getAdvertiserCampaigns(advertiserId: string): Promise<AdCampaign[]>;
+  getAdvertiserStats(advertiserId: string): Promise<any>;
   updateAdCampaign(id: string, updates: Partial<AdCampaign>): Promise<AdCampaign>;
   pauseAdCampaign(id: string): Promise<void>;
   resumeAdCampaign(id: string): Promise<void>;
@@ -1591,8 +1593,9 @@ export class DatabaseStorage implements IStorage {
   // Advertising system operations implementation
   
   // Advertiser operations
-  async createAdvertiser(advertiser: InsertAdvertiser): Promise<Advertiser> {
-    const [newAdvertiser] = await db.insert(advertisers).values(advertiser).returning();
+  async createAdvertiser(advertiser: InsertAdvertiser, userId?: string): Promise<Advertiser> {
+    const advertiserData = userId ? { ...advertiser, userId } : advertiser;
+    const [newAdvertiser] = await db.insert(advertisers).values(advertiserData).returning();
     return newAdvertiser;
   }
 
@@ -1633,6 +1636,34 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(adCampaigns)
       .where(eq(adCampaigns.advertiserId, advertiserId))
       .orderBy(desc(adCampaigns.createdAt));
+  }
+
+  async getAdvertiserCampaigns(advertiserId: string): Promise<AdCampaign[]> {
+    return await this.getAdCampaignsByAdvertiser(advertiserId);
+  }
+
+  async getAdvertiserStats(advertiserId: string): Promise<any> {
+    // Get campaign stats for this advertiser
+    const campaigns = await this.getAdCampaignsByAdvertiser(advertiserId);
+    
+    const totalSpend = campaigns.reduce((sum, campaign) => sum + (campaign.totalSpent || 0), 0);
+    const totalImpressions = campaigns.reduce((sum, campaign) => sum + (campaign.totalImpressions || 0), 0);
+    const totalClicks = campaigns.reduce((sum, campaign) => sum + (campaign.totalClicks || 0), 0);
+    const averageCTR = totalImpressions > 0 ? ((totalClicks / totalImpressions) * 100) : 0;
+    
+    const activeCampaigns = campaigns.filter(c => c.status === 'active').length;
+    const completedCampaigns = campaigns.filter(c => c.status === 'completed').length;
+    
+    return {
+      totalSpend,
+      totalImpressions,
+      totalClicks,
+      averageCTR: parseFloat(averageCTR.toFixed(2)),
+      activeCampaigns,
+      completedCampaigns,
+      totalReach: totalImpressions, // Simplified: using impressions as reach
+      conversionRate: 0, // Would need conversion tracking
+    };
   }
 
   async updateAdCampaign(id: string, updates: Partial<AdCampaign>): Promise<AdCampaign> {
