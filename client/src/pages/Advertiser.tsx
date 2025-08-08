@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { 
   TrendingUp, 
@@ -18,11 +19,11 @@ import {
   Users, 
   Eye, 
   BarChart3, 
-  Plus,
   Settings,
   Target,
   Zap,
-  Home
+  Home,
+  User
 } from "lucide-react";
 import { Link } from "wouter";
 
@@ -111,9 +112,13 @@ export default function Advertiser() {
               PIYAKast에서 효과적인 광고 캠페인을 관리하세요
             </p>
           </div>
-          <Button className="bg-blue-600 hover:bg-blue-700">
-            <Plus className="w-4 h-4 mr-2" />
-            새 캠페인 생성
+          <Button variant="ghost" className="relative h-10 w-10 rounded-full" data-testid="button-user-profile-advertiser">
+            <Avatar className="h-10 w-10">
+              <AvatarImage src={user?.profileImageUrl || ""} alt={user?.username} />
+              <AvatarFallback>
+                <User className="h-5 w-5" />
+              </AvatarFallback>
+            </Avatar>
           </Button>
         </div>
 
