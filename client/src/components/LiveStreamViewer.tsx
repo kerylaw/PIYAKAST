@@ -260,14 +260,13 @@ export default function LiveStreamViewer({
                     <p className="text-gray-400">방송이 아직 시작되지 않았습니다</p>
                   </div>
                 )}
-                  {rtmpUrl && streamKey && isOwner && (
-                    <div className="text-sm text-gray-500 space-y-1">
-                      <p>OBS Studio 설정:</p>
-                      <p>RTMP URL: {rtmpUrl}</p>
-                      <p>Stream Key: {streamKey?.slice(0, 8)}...</p>
-                    </div>
-                  )}
-                </div>
+                {rtmpUrl && streamKey && isOwner && (
+                  <div className="text-sm text-gray-500 space-y-1 mt-4">
+                    <p>OBS Studio 설정:</p>
+                    <p>RTMP URL: {rtmpUrl}</p>
+                    <p>Stream Key: {streamKey?.slice(0, 8)}...</p>
+                  </div>
+                )}
               </div>
             </div>
           )}

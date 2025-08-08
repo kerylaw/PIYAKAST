@@ -13,12 +13,12 @@ export default function Home() {
   const wsRef = useRef<WebSocket | null>(null);
 
   // Fetch popular videos
-  const { data: videos = [], isLoading: videosLoading } = useQuery({
+  const { data: videos = [], isLoading: videosLoading } = useQuery<Video[]>({
     queryKey: ["/api/videos"],
   });
 
   // Fetch live streams
-  const { data: liveStreams = [], isLoading: streamsLoading } = useQuery({
+  const { data: liveStreams = [], isLoading: streamsLoading } = useQuery<Stream[]>({
     queryKey: ["/api/streams/live"],
   });
 
