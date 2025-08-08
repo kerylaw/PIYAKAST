@@ -6,8 +6,8 @@ const activeStreams = new Map<string, {
   viewerCount: number;
 }>();
 
-const HEARTBEAT_TIMEOUT = 30000; // 30 seconds
-const CHECK_INTERVAL = 15000; // Check every 15 seconds
+const HEARTBEAT_TIMEOUT = 15000; // 15 seconds (reduced from 30)
+const CHECK_INTERVAL = 10000; // Check every 10 seconds (reduced from 15)
 
 export function recordStreamHeartbeat(streamId: string, viewerCount: number = 0) {
   activeStreams.set(streamId, {
@@ -50,7 +50,7 @@ async function cleanupInactiveStreams() {
     // Update database to mark streams as offline
     for (const streamId of streamsToDeactivate) {
       await storage.updateStreamStatus(streamId, false);
-      console.log(`🔴 Stream ${streamId} marked as offline (no heartbeat)`);
+      console.log(`🔴 Stream ${streamId} marked as offline (no heartbeat for 15s)`);
     }
     
     // Also check for streams marked as live in DB but not in active streams
@@ -58,7 +58,7 @@ async function cleanupInactiveStreams() {
     for (const stream of dbLiveStreams) {
       if (!activeStreams.has(stream.id)) {
         await storage.updateStreamStatus(stream.id, false);
-        console.log(`🔴 Stream ${stream.id} marked as offline (not active)`);
+        console.log(`🔴 Stream ${stream.id} marked as offline (not in active list)`);
       }
     }
     

@@ -73,9 +73,15 @@ export function StreamControls({ streamId, isLive, isOwner }: StreamControlsProp
       console.error("Stop stream error:", error);
       toast({
         title: "방송 종료 실패",
-        description: error.message,
+        description: "네트워크 오류가 발생했습니다. 잠시 후 자동으로 종료됩니다. (최대 15초)",
         variant: "destructive",
       });
+      
+      // 실패 시 15초 후 페이지 새로고침하여 최신 상태 반영
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["/api/streams/live"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/streams", streamId] });
+      }, 16000);
     },
   });
 
