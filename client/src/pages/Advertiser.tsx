@@ -19,6 +19,7 @@ import {
   Users, 
   Eye, 
   BarChart3, 
+  Plus,
   Settings,
   Target,
   Zap,
