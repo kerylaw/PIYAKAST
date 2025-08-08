@@ -39,12 +39,12 @@ import {
   Moon
 } from "lucide-react";
 import { Link } from "wouter";
-import { useTheme } from "@/contexts/ThemeContext";
+// import { useTheme } from "@/contexts/ThemeContext";
 
 export default function Advertiser() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const { theme, toggleTheme } = useTheme();
+  // const { theme, toggleTheme } = useTheme();
   const [newCampaignName, setNewCampaignName] = useState("");
   const [newCampaignBudget, setNewCampaignBudget] = useState("");
   const [newCampaignTarget, setNewCampaignTarget] = useState("");
@@ -158,9 +158,14 @@ export default function Advertiser() {
                   <span>Settings</span>
                 </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={toggleTheme} data-testid="button-toggle-theme">
-                {theme === 'light' ? <Moon className="mr-2 h-4 w-4" /> : <Sun className="mr-2 h-4 w-4" />}
-                <span>{theme === 'light' ? 'Dark Mode' : 'Light Mode'}</span>
+              <DropdownMenuItem onClick={() => {
+                toast({
+                  title: "테마 설정",
+                  description: "설정 페이지에서 테마를 변경할 수 있습니다.",
+                });
+              }} data-testid="button-toggle-theme">
+                <Moon className="mr-2 h-4 w-4" />
+                <span>Dark Mode</span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={async () => {
