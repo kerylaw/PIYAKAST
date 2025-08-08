@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { Search, Video, Menu, X, Settings, User, Upload, LogOut, Sun, Moon, ArrowLeft } from "lucide-react";
+import { Search, Video, Menu, X, Settings, User, Upload, LogOut, Sun, Moon, ArrowLeft, BarChart3, Shield, DollarSign } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -144,6 +144,26 @@ export default function Header({ onMobileMenuToggle }: HeaderProps) {
                         <Video className="mr-2 h-4 w-4" />
                         <span>Go Live</span>
                       </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem asChild>
+                        <Link href="/studio" className="flex items-center cursor-pointer" data-testid="link-studio">
+                          <BarChart3 className="mr-2 h-4 w-4" />
+                          <span>Creator Studio</span>
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href="/advertiser" className="flex items-center cursor-pointer" data-testid="link-advertiser">
+                          <DollarSign className="mr-2 h-4 w-4" />
+                          <span>Advertiser</span>
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href="/admin" className="flex items-center cursor-pointer" data-testid="link-admin">
+                          <Shield className="mr-2 h-4 w-4" />
+                          <span>Admin Panel</span>
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
                       <DropdownMenuItem>
                         <Settings className="mr-2 h-4 w-4" />
                         <span>Settings</span>

@@ -2266,5 +2266,120 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Advertiser Dashboard API
+  app.get('/api/advertiser/profile', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      // For now, return basic user info as advertiser profile
+      const user = await storage.getUser(userId);
+      
+      res.json({
+        id: user?.id,
+        companyName: user?.name || 'Your Company',
+        email: user?.email,
+        status: 'active',
+        accountType: 'advertiser'
+      });
+    } catch (error) {
+      console.error('Error fetching advertiser profile:', error);
+      res.status(500).json({ message: 'Failed to fetch advertiser profile' });
+    }
+  });
+
+  app.get('/api/advertiser/campaigns', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      
+      // For now, return mock data. In a real implementation, this would fetch from campaigns table
+      const mockCampaigns = [
+        {
+          id: '1',
+          name: 'K-Beauty 신제품 캠페인',
+          budget: 100000,
+          targetAudience: 'k-beauty',
+          status: 'active',
+          spendPercentage: 65,
+          impressions: 25000,
+          clicks: 850,
+          ctr: 3.4
+        },
+        {
+          id: '2', 
+          name: 'K-Pop 팬 대상 마케팅',
+          budget: 50000,
+          targetAudience: 'k-pop',
+          status: 'paused',
+          spendPercentage: 32,
+          impressions: 12000,
+          clicks: 280,
+          ctr: 2.3
+        }
+      ];
+      
+      res.json(mockCampaigns);
+    } catch (error) {
+      console.error('Error fetching campaigns:', error);
+      res.status(500).json({ message: 'Failed to fetch campaigns' });
+    }
+  });
+
+  app.post('/api/advertiser/campaigns', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const { name, budget, targetAudience } = req.body;
+      
+      if (!name || !budget) {
+        return res.status(400).json({ message: 'Campaign name and budget are required' });
+      }
+
+      // For now, return mock created campaign. In real implementation, save to database
+      const newCampaign = {
+        id: Date.now().toString(),
+        name,
+        budget: parseInt(budget),
+        targetAudience,
+        status: 'active',
+        spendPercentage: 0,
+        impressions: 0,
+        clicks: 0,
+        ctr: 0,
+        createdAt: new Date().toISOString(),
+        userId
+      };
+      
+      res.status(201).json(newCampaign);
+    } catch (error) {
+      console.error('Error creating campaign:', error);
+      res.status(500).json({ message: 'Failed to create campaign' });
+    }
+  });
+
+  app.get('/api/advertiser/stats', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      
+      // For now, return mock statistics. In real implementation, aggregate from campaigns/ads
+      const mockStats = {
+        totalSpend: 45000,
+        totalImpressions: 85000,
+        totalClicks: 2150,
+        averageCTR: 2.8,
+        activeCampaigns: 2,
+        totalCampaigns: 3,
+        topPerformingCategory: 'K-Beauty',
+        monthlySpend: [
+          { month: 'Jan', spend: 15000 },
+          { month: 'Feb', spend: 30000 },
+          { month: 'Mar', spend: 45000 }
+        ]
+      };
+      
+      res.json(mockStats);
+    } catch (error) {
+      console.error('Error fetching advertiser stats:', error);
+      res.status(500).json({ message: 'Failed to fetch advertiser statistics' });
+    }
+  });
+
   return httpServer;
 }
