@@ -153,9 +153,9 @@ export default function LiveStreamViewer({
     };
   }, [streamId, user?.id]);
 
-  // Send heartbeat every 15 seconds to keep stream active
+  // Send heartbeat every 15 seconds - ONLY for stream owner (broadcaster)
   useEffect(() => {
-    if (!isLive) return;
+    if (!isLive || !isOwner) return; // Only stream owner sends heartbeat
     
     const heartbeatInterval = setInterval(() => {
       if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
@@ -164,14 +164,14 @@ export default function LiveStreamViewer({
           streamId: streamId,
           userId: user?.id,
         }));
-        console.log("Sending stream heartbeat for:", streamId);
+        console.log("🎥 Broadcasting heartbeat for stream:", streamId);
       }
     }, 15000); // Send every 15 seconds
 
     return () => {
       clearInterval(heartbeatInterval);
     };
-  }, [streamId, isLive, user?.id]);
+  }, [streamId, isLive, isOwner, user?.id]);
 
   const sendChatMessage = () => {
     if (!chatMessage.trim() || !isAuthenticated || !wsRef.current) return;
