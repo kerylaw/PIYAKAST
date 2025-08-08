@@ -12,7 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
-import { useTheme } from "@/contexts/ThemeContext";
+// import { useTheme } from "@/contexts/ThemeContext";
 import { 
   User, 
   Bell, 
@@ -28,7 +28,7 @@ import { Link } from "wouter";
 export default function Settings() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const { theme, toggleTheme } = useTheme();
+  // const { theme, toggleTheme } = useTheme();
   const [profileData, setProfileData] = useState({
     username: user?.username || "",
     email: user?.email || "",
@@ -422,12 +422,17 @@ export default function Settings() {
                   <div className="space-y-0.5">
                     <Label>다크 모드</Label>
                     <p className="text-sm text-muted-foreground">
-                      현재 테마: {theme === 'light' ? '라이트 모드' : '다크 모드'}
+                      테마 설정을 변경하세요
                     </p>
                   </div>
                   <Switch
-                    checked={theme === 'dark'}
-                    onCheckedChange={toggleTheme}
+                    checked={false}
+                    onCheckedChange={() => {
+                      toast({
+                        title: "테마 설정",
+                        description: "테마 변경 기능이 곧 추가될 예정입니다.",
+                      });
+                    }}
                   />
                 </div>
                 <div className="space-y-4">
