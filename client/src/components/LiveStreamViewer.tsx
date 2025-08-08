@@ -153,25 +153,74 @@ export default function LiveStreamViewer({
     };
   }, [streamId, user?.id]);
 
-  // Send heartbeat every 15 seconds - ONLY for stream owner (broadcaster)
+  // Robust heartbeat system - ONLY for stream owner (broadcaster)
   useEffect(() => {
     if (!isLive || !isOwner) return; // Only stream owner sends heartbeat
     
-    const heartbeatInterval = setInterval(() => {
-      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-        wsRef.current.send(JSON.stringify({
-          type: 'stream_heartbeat',
-          streamId: streamId,
-          userId: user?.id,
-        }));
-        console.log("🎥 Broadcasting heartbeat for stream:", streamId);
+    let heartbeatInterval: NodeJS.Timeout;
+    let heartbeatFailCount = 0;
+    const MAX_FAILURES = 3;
+    
+    const sendHeartbeat = async () => {
+      try {
+        // Try WebSocket first
+        if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+          wsRef.current.send(JSON.stringify({
+            type: 'stream_heartbeat',
+            streamId: streamId,
+            userId: user?.id,
+          }));
+          console.log("🎥 Broadcasting heartbeat via WebSocket:", streamId);
+          heartbeatFailCount = 0; // Reset failure count on success
+        } else {
+          // Fallback to HTTP heartbeat if WebSocket fails
+          throw new Error('WebSocket not available');
+        }
+      } catch (error) {
+        heartbeatFailCount++;
+        console.warn(`⚠️ WebSocket heartbeat failed (${heartbeatFailCount}/${MAX_FAILURES}), trying HTTP fallback:`, error);
+        
+        // HTTP fallback heartbeat
+        try {
+          const response = await fetch(`/api/streams/${streamId}/heartbeat`, {
+            method: 'POST',
+            credentials: 'include'
+          });
+          
+          if (response.ok) {
+            console.log("✅ Backup HTTP heartbeat sent for stream:", streamId);
+            heartbeatFailCount = Math.max(0, heartbeatFailCount - 1); // Reduce failure count slightly
+          } else {
+            throw new Error(`HTTP heartbeat failed: ${response.status}`);
+          }
+        } catch (httpError) {
+          console.error(`❌ Both WebSocket and HTTP heartbeat failed (${heartbeatFailCount}/${MAX_FAILURES}):`, httpError);
+          
+          // If too many failures, show warning to user
+          if (heartbeatFailCount >= MAX_FAILURES) {
+            toast({
+              title: "네트워크 연결 불안정",
+              description: "방송 연결이 불안정합니다. 네트워크를 확인해주세요.",
+              variant: "destructive",
+            });
+            heartbeatFailCount = 0; // Reset to avoid spam
+          }
+        }
       }
-    }, 15000); // Send every 15 seconds
+    };
+    
+    // Send initial heartbeat immediately
+    sendHeartbeat();
+    
+    // Set up periodic heartbeat
+    heartbeatInterval = setInterval(sendHeartbeat, 15000); // Send every 15 seconds
 
     return () => {
-      clearInterval(heartbeatInterval);
+      if (heartbeatInterval) {
+        clearInterval(heartbeatInterval);
+      }
     };
-  }, [streamId, isLive, isOwner, user?.id]);
+  }, [streamId, isLive, isOwner, user?.id, toast]);
 
   const sendChatMessage = () => {
     if (!chatMessage.trim() || !isAuthenticated || !wsRef.current) return;
