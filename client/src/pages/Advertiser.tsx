@@ -12,6 +12,13 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { 
   TrendingUp, 
@@ -24,13 +31,20 @@ import {
   Target,
   Zap,
   Home,
-  User
+  User,
+  LogOut,
+  Upload,
+  Video,
+  Sun,
+  Moon
 } from "lucide-react";
 import { Link } from "wouter";
+import { useTheme } from "@/contexts/ThemeContext";
 
 export default function Advertiser() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { theme, toggleTheme } = useTheme();
   const [newCampaignName, setNewCampaignName] = useState("");
   const [newCampaignBudget, setNewCampaignBudget] = useState("");
   const [newCampaignTarget, setNewCampaignTarget] = useState("");
@@ -113,14 +127,53 @@ export default function Advertiser() {
               PIYAKast에서 효과적인 광고 캠페인을 관리하세요
             </p>
           </div>
-          <Button variant="ghost" className="relative h-10 w-10 rounded-full" data-testid="button-user-profile-advertiser">
-            <Avatar className="h-10 w-10">
-              <AvatarImage src={user?.profileImageUrl || ""} alt={user?.username} />
-              <AvatarFallback>
-                <User className="h-5 w-5" />
-              </AvatarFallback>
-            </Avatar>
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="relative h-10 w-10 rounded-full" data-testid="button-user-profile-advertiser">
+                <Avatar className="h-10 w-10">
+                  <AvatarImage src={user?.profileImageUrl || ""} alt={user?.username} />
+                  <AvatarFallback>
+                    {user?.username?.charAt(0).toUpperCase() || <User className="h-5 w-5" />}
+                  </AvatarFallback>
+                </Avatar>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-56 bg-elevated border-gray-700" align="end">
+              <DropdownMenuItem asChild>
+                <Link href={`/profile/${user?.username}`} className="flex items-center cursor-pointer" data-testid="link-profile">
+                  <User className="mr-2 h-4 w-4" />
+                  <span>Profile</span>
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/studio" className="flex items-center cursor-pointer" data-testid="link-studio">
+                  <BarChart3 className="mr-2 h-4 w-4" />
+                  <span>Creator Studio</span>
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem>
+                <Settings className="mr-2 h-4 w-4" />
+                <span>Settings</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={toggleTheme} data-testid="button-toggle-theme">
+                {theme === 'light' ? <Moon className="mr-2 h-4 w-4" /> : <Sun className="mr-2 h-4 w-4" />}
+                <span>{theme === 'light' ? 'Dark Mode' : 'Light Mode'}</span>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={async () => {
+                try {
+                  await fetch('/api/logout', { method: 'POST' });
+                  window.location.href = '/';
+                } catch (error) {
+                  console.error('Logout failed:', error);
+                }
+              }} data-testid="button-logout">
+                <LogOut className="mr-2 h-4 w-4" />
+                <span>Logout</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         {/* 통계 카드 */}
