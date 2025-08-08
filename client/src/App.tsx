@@ -54,15 +54,28 @@ function StreamHeartbeatManager() {
         const ws = new WebSocket(wsUrl);
         
         ws.onopen = () => {
+          console.log("✅ Heartbeat WebSocket connected, sending heartbeat");
           ws.send(JSON.stringify({
             type: 'stream_heartbeat',
             streamId: activeStream.id
           }));
-          ws.close();
+          
+          // Wait a bit before closing to ensure message is sent
+          setTimeout(() => {
+            ws.close();
+          }, 100);
+        };
+        
+        ws.onmessage = (event) => {
+          console.log("📨 Heartbeat WebSocket message received:", event.data);
+        };
+        
+        ws.onclose = () => {
+          console.log("🔒 Heartbeat WebSocket closed");
         };
         
         ws.onerror = (error) => {
-          console.error("Heartbeat WebSocket error:", error);
+          console.error("❌ Heartbeat WebSocket error:", error);
         };
       };
 

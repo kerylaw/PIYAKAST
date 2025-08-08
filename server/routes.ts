@@ -1463,14 +1463,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           case 'heartbeat':
           case 'stream_heartbeat':
+            console.log(`💓 Received heartbeat for stream: ${data.streamId || currentStreamId}`);
             // Update heartbeat for current stream
             if (currentStreamId) {
               const viewerCount = streamConnections.get(currentStreamId)?.size || 0;
               recordStreamHeartbeat(currentStreamId, viewerCount);
+              console.log(`💓 Current stream heartbeat: ${currentStreamId}, viewers: ${viewerCount}`);
             }
             // Handle global stream heartbeat (from App.tsx)
             if (data.streamId) {
               recordStreamHeartbeat(data.streamId, 1);
+              console.log(`💓 Global stream heartbeat: ${data.streamId}`);
             }
             break;
 
