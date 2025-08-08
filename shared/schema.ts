@@ -17,7 +17,7 @@ import { z } from "zod";
 
 // Session storage table - required for Replit Auth
 export const sessions = pgTable(
-  "sessions",
+  "session",
   {
     sid: varchar("sid").primaryKey(),
     sess: jsonb("sess").notNull(),
