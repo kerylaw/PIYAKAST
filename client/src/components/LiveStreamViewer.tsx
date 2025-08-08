@@ -236,30 +236,32 @@ export default function LiveStreamViewer({
               className="w-full h-full object-cover"
               style={{ transform: 'scaleX(-1)' }} // 미러 효과
             />
+          ) : isLive ? (
+            // 시청자용 - 웹캠 스트림을 직접 표시 시도
+            <div className="relative w-full h-full bg-gray-900">
+              {/* 임시 웹캠 공유 메시지 */}
+              <div className="absolute inset-0 flex items-center justify-center bg-gray-900/80">
+                <div className="text-center text-white space-y-4">
+                  <div className="text-lg font-medium mb-2">🎥 {streamerName}님의 라이브 방송</div>
+                  <div className="space-y-2">
+                    <div className="text-yellow-400">📹 웹캠 방송 중</div>
+                    <div className="text-sm text-gray-300">
+                      스트리머가 웹캠으로 직접 방송하고 있습니다.<br/>
+                      실시간 채팅으로 소통해보세요!
+                    </div>
+                  </div>
+                  <div className="text-xs text-gray-400 mt-4 bg-gray-800 p-3 rounded-lg">
+                    💡 향후 업데이트에서는 더 안정적인 스트리밍을<br/>
+                    제공할 예정입니다. 현재는 채팅으로 소통하세요!
+                  </div>
+                </div>
+              </div>
+            </div>
           ) : (
             <div className="absolute inset-0 flex items-center justify-center bg-gray-900">
-              <div className="text-center text-white">
-                {isLive ? (
-                  <div className="space-y-4">
-                    <div className="text-lg font-medium mb-2">🎥 {streamerName}님의 라이브 방송</div>
-                    <div className="animate-pulse space-y-2">
-                      <div className="text-blue-400">📡 스트리밍 연결 중...</div>
-                      <div className="text-sm text-gray-400">
-                        스트리머가 웹캠으로 방송 중입니다.<br/>
-                        잠시만 기다려주세요.
-                      </div>
-                    </div>
-                    <div className="text-xs text-gray-500 mt-4">
-                      💡 팁: 스트리머가 OBS나 외부 프로그램으로 방송하는 경우<br/>
-                      더 안정적인 화질을 제공할 수 있습니다.
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    <div className="text-lg font-medium mb-2">🎥 Live Stream</div>
-                    <p className="text-gray-400">방송이 아직 시작되지 않았습니다</p>
-                  </div>
-                )}
+              <div className="text-center text-white space-y-2">
+                <div className="text-lg font-medium mb-2">🎥 Live Stream</div>
+                <p className="text-gray-400">방송이 아직 시작되지 않았습니다</p>
                 {rtmpUrl && streamKey && isOwner && (
                   <div className="text-sm text-gray-500 space-y-1 mt-4">
                     <p>OBS Studio 설정:</p>
