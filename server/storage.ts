@@ -461,10 +461,33 @@ export class DatabaseStorage implements IStorage {
     await db.update(streams).set(updateData).where(eq(streams.id, id));
   }
 
-  async getUserStreams(userId: string): Promise<Stream[]> {
+  async getUserStreams(userId: string): Promise<any[]> {
     return await db
-      .select()
+      .select({
+        id: streams.id,
+        userId: streams.userId,
+        title: streams.title,
+        description: streams.description,
+        category: streams.category,
+        isLive: streams.isLive,
+        isPublic: streams.isPublic,
+        viewerCount: streams.viewerCount,
+        startedAt: streams.startedAt,
+        endedAt: streams.endedAt,
+        createdAt: streams.createdAt,
+        peertubeEmbedUrl: streams.peertubeEmbedUrl,
+        rtmpUrl: streams.rtmpUrl,
+        streamKey: streams.streamKey,
+        user: {
+          id: users.id,
+          username: users.username,
+          profileImageUrl: users.profileImageUrl,
+          firstName: users.firstName,
+          lastName: users.lastName,
+        },
+      })
       .from(streams)
+      .leftJoin(users, eq(streams.userId, users.id))
       .where(eq(streams.userId, userId))
       .orderBy(desc(streams.createdAt));
   }
