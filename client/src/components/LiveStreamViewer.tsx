@@ -239,11 +239,27 @@ export default function LiveStreamViewer({
           ) : (
             <div className="absolute inset-0 flex items-center justify-center bg-gray-900">
               <div className="text-center text-white">
-                <div className="text-lg font-medium mb-2">🎥 Live Stream</div>
-                <div className="space-y-2">
-                  <p className="text-gray-400">
-                    {isLive ? "스트리밍 준비 중..." : "방송이 아직 시작되지 않았습니다"}
-                  </p>
+                {isLive ? (
+                  <div className="space-y-4">
+                    <div className="text-lg font-medium mb-2">🎥 {streamerName}님의 라이브 방송</div>
+                    <div className="animate-pulse space-y-2">
+                      <div className="text-blue-400">📡 스트리밍 연결 중...</div>
+                      <div className="text-sm text-gray-400">
+                        스트리머가 웹캠으로 방송 중입니다.<br/>
+                        잠시만 기다려주세요.
+                      </div>
+                    </div>
+                    <div className="text-xs text-gray-500 mt-4">
+                      💡 팁: 스트리머가 OBS나 외부 프로그램으로 방송하는 경우<br/>
+                      더 안정적인 화질을 제공할 수 있습니다.
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="text-lg font-medium mb-2">🎥 Live Stream</div>
+                    <p className="text-gray-400">방송이 아직 시작되지 않았습니다</p>
+                  </div>
+                )}
                   {rtmpUrl && streamKey && isOwner && (
                     <div className="text-sm text-gray-500 space-y-1">
                       <p>OBS Studio 설정:</p>
