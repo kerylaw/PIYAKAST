@@ -35,8 +35,12 @@ export default function Header({ onMobileMenuToggle }: HeaderProps) {
     enabled: !!user?.id && isAuthenticated,
   });
 
+  // Find active stream: either live+public OR has startedAt but no endedAt (broadcasting)
   const activeStream = Array.isArray(userStreams) 
-    ? userStreams.find((stream: any) => stream.isLive && stream.isPublic)
+    ? userStreams.find((stream: any) => 
+        (stream.isLive && stream.isPublic) || 
+        (stream.startedAt && !stream.endedAt)
+      )
     : null;
 
   const isOnStreamPage = location.startsWith('/stream/') && location.includes(activeStream?.id || '');
