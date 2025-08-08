@@ -64,7 +64,11 @@ export class PeerTubeClient {
   async authenticate(): Promise<void> {
     try {
       // Step 1: Get OAuth client credentials
-      const clientResponse = await axios.get(`${this.baseUrl}/api/v1/oauth-clients/local`);
+      const clientResponse = await axios.get(`${this.baseUrl}/api/v1/oauth-clients/local`, {
+        headers: {
+          'Host': new URL(this.baseUrl).host
+        }
+      });
       this.clientId = clientResponse.data.client_id;
       this.clientSecret = clientResponse.data.client_secret;
 
@@ -87,7 +91,8 @@ export class PeerTubeClient {
         tokenData,
         {
           headers: {
-            'Content-Type': 'application/x-www-form-urlencoded'
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Host': new URL(this.baseUrl).hostname
           }
         }
       );
@@ -109,7 +114,8 @@ export class PeerTubeClient {
     }
     return {
       'Authorization': `Bearer ${this.accessToken}`,
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
+      'Host': new URL(this.baseUrl).host
     };
   }
 

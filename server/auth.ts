@@ -240,7 +240,7 @@ export function setupAuth(app: Express) {
       });
     } catch (error) {
       console.error("Registration error:", error);
-      res.status(400).json({ message: "Registration failed" });
+      res.status(400).json({ message: "Registration failed", error: error.message });
     }
   });
 

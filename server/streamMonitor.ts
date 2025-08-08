@@ -96,13 +96,13 @@ async function cleanupInactiveStreams() {
 let monitorInterval: NodeJS.Timeout;
 
 export function startStreamMonitoring() {
-  console.log('🎬 Starting stream monitoring...');
+  // console.log('🎬 Starting stream monitoring...');
   
-  // Initial cleanup
-  cleanupInactiveStreams();
+  // // Initial cleanup
+  // cleanupInactiveStreams();
   
-  // Set up periodic cleanup
-  monitorInterval = setInterval(cleanupInactiveStreams, CHECK_INTERVAL);
+  // // Set up periodic cleanup
+  // monitorInterval = setInterval(cleanupInactiveStreams, CHECK_INTERVAL);
 }
 
 export function stopStreamMonitoring() {

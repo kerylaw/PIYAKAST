@@ -3,7 +3,7 @@ import express from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
-import { recordStreamHeartbeat, removeStream } from "./streamMonitor";
+// import { recordStreamHeartbeat, removeStream } from "./streamMonitor";
 import { setupAuth, requireAuth } from "./auth";
 
 // Admin middleware
@@ -58,6 +58,8 @@ const upload = multer({
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Create HTTP server
+  const httpServer = createServer(app);
   // Auth middleware
   setupAuth(app);
 
@@ -431,95 +433,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Create Cloudflare stream (BACKUP - NOT USED)
-  app.post('/api/streams/cloudflare', requireAuth, async (req: any, res) => {
-    try {
-      console.log('🎥 Creating Cloudflare stream...', req.body);
-      const userId = req.user.id;
-      const { title, description, category } = req.body;
-      
-      // 스트림 데이터 준비 (insertSchema 사용하지 않고 직접 구성)
-      const streamData = {
-        title,
-        description: description || "",
-        category: category || "General",
-        userId,
-        isLive: true, // 스트림 생성 시 바로 라이브 상태로 설정
-        startedAt: new Date(),
-        viewerCount: 0,
-      };
-
-      const stream = await storage.createStream(streamData);
-      console.log('✅ Database stream created:', stream.id);
-
-      // Create actual Cloudflare Live Input
-      if (process.env.CLOUDFLARE_API_TOKEN && process.env.CLOUDFLARE_ACCOUNT_ID) {
-        try {
-          const response = await fetch(
-            `https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}/stream/live_inputs`,
-            {
-              method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${process.env.CLOUDFLARE_API_TOKEN}`,
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                meta: {
-                  name: title
-                },
-                recording: {
-                  mode: 'automatic',
-                  timeoutSeconds: 10
-                }
-              }),
-            }
-          );
-
-          if (response.ok) {
-            const data = await response.json();
-            console.log('✅ Cloudflare Live Input created:', data);
-            const liveInput = data.result;
-            
-            res.json({
-              streamId: stream.id,
-              streamKey: liveInput.uid,
-              rtmpUrl: liveInput.rtmps.url,
-              rtmpStreamKey: liveInput.rtmps.streamKey,
-              playbackUrl: `/stream/${stream.id}`,
-              cloudflareStreamId: liveInput.uid,
-            });
-          } else {
-            const errorData = await response.json();
-            console.error('❌ Cloudflare API Error Response:', errorData);
-            throw new Error(`Failed to create Cloudflare Live Input: ${JSON.stringify(errorData)}`);
-          }
-        } catch (cloudflareError) {
-          console.error("Cloudflare API Error:", cloudflareError);
-          
-          // Delete the created stream since Cloudflare failed
-          try {
-            await storage.deleteStream(stream.id);
-          } catch (deleteError) {
-            console.error("Failed to cleanup stream:", deleteError);
-          }
-          
-          return res.status(400).json({ 
-            message: "Cloudflare Stream service is not enabled",
-            details: "Please enable Cloudflare Stream in your account dashboard first. Visit https://dash.cloudflare.com and navigate to Stream to activate the service.",
-            error: cloudflareError instanceof Error ? cloudflareError.message : 'Unknown error'
-          });
-        }
-      } else {
-        return res.status(400).json({
-          message: "Cloudflare Stream is disabled - Use PeerTube streaming instead",
-          details: "This platform now uses PeerTube for decentralized live streaming. Please use the main stream creation endpoint."
-        });
-      }
-    } catch (error) {
-      console.error("Error creating Cloudflare stream:", error);
-      res.status(500).json({ message: "Failed to create Cloudflare stream" });
-    }
-  });
+  
 
   app.patch('/api/streams/:id/status', requireAuth, async (req: any, res) => {
     try {
@@ -1411,146 +1325,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create HTTP server
-  const httpServer = createServer(app);
-
-  // WebSocket server for real-time chat
-  const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
-
-  // Broadcast function for real-time updates
-  function broadcastToAll(message: any) {
-    const messageStr = JSON.stringify(message);
-    wss.clients.forEach(client => {
-      if (client.readyState === 1) { // WebSocket.OPEN
-        client.send(messageStr);
-      }
-    });
-  }
-
-  // Store active connections by stream ID
-  const streamConnections = new Map<string, Set<WebSocket>>();
-
-  wss.on('connection', (ws, req) => {
-    console.log('🔌 New WebSocket connection');
-    
-    let currentStreamId: string | null = null;
-
-    ws.on('message', async (message) => {
-      try {
-        const data = JSON.parse(message.toString());
-        
-        switch (data.type) {
-          case 'join_stream':
-            // Join a stream room
-            currentStreamId = data.streamId;
-            if (currentStreamId && !streamConnections.has(currentStreamId)) {
-              streamConnections.set(currentStreamId, new Set());
-            }
-            if (currentStreamId) {
-              streamConnections.get(currentStreamId)!.add(ws);
-              // Record heartbeat for stream activity
-              recordStreamHeartbeat(currentStreamId, streamConnections.get(currentStreamId)!.size);
-            }
-            
-            // Send recent chat messages with user info
-            try {
-              if (currentStreamId) {
-                const recentMessages = await storage.getChatMessagesByStream(currentStreamId, 20);
-                // Add user info to messages
-                const messagesWithUsers = await Promise.all(
-                  recentMessages.map(async (msg) => {
-                    const user = await storage.getUser(msg.userId);
-                    return {
-                      ...msg,
-                      username: user?.username || user?.firstName || "Unknown User",
-                      profileImageUrl: user?.profileImageUrl || null,
-                    };
-                  })
-                );
-                ws.send(JSON.stringify({
-                  type: 'chat_history',
-                  messages: messagesWithUsers.reverse(),
-                }));
-              }
-            } catch (error) {
-              console.error('Error fetching chat history:', error);
-            }
-            break;
-
-          case 'heartbeat':
-          case 'stream_heartbeat':
-            console.log(`💓 Received heartbeat for stream: ${data.streamId || currentStreamId}`);
-            // Update heartbeat for current stream
-            if (currentStreamId) {
-              const viewerCount = streamConnections.get(currentStreamId)?.size || 0;
-              recordStreamHeartbeat(currentStreamId, viewerCount);
-              console.log(`💓 Current stream heartbeat: ${currentStreamId}, viewers: ${viewerCount}`);
-            }
-            // Handle global stream heartbeat (from App.tsx)
-            if (data.streamId) {
-              recordStreamHeartbeat(data.streamId, 1);
-              console.log(`💓 Global stream heartbeat: ${data.streamId}`);
-            }
-            break;
-
-          case 'chat_message':
-            if (currentStreamId && data.userId && data.message) {
-              try {
-                // Save message to database
-                const chatMessage = await storage.createChatMessage({
-                  streamId: currentStreamId,
-                  userId: data.userId,
-                  message: data.message,
-                });
-
-                // Get user information for the message
-                const user = await storage.getUser(data.userId);
-                
-                // Create message object with user info for broadcasting
-                const messageWithUser = {
-                  ...chatMessage,
-                  username: user?.username || user?.firstName || "Unknown User",
-                  profileImageUrl: user?.profileImageUrl || null,
-                  userId: data.userId, // Make sure userId is included
-                };
-
-                // Record activity heartbeat
-                recordStreamHeartbeat(currentStreamId);
-
-                // Broadcast to all clients in the stream
-                const connections = streamConnections.get(currentStreamId);
-                if (connections) {
-                  const messageData = JSON.stringify({
-                    type: 'new_message',
-                    message: messageWithUser,
-                  });
-
-                  connections.forEach(client => {
-                    if (client.readyState === WebSocket.OPEN) {
-                      client.send(messageData);
-                    }
-                  });
-                }
-              } catch (error) {
-                console.error('Error saving chat message:', error);
-              }
-            }
-            break;
-        }
-      } catch (error) {
-        console.error('Error processing WebSocket message:', error);
-      }
-    });
-
-    ws.on('close', () => {
-      // Remove connection from stream room
-      if (currentStreamId && streamConnections.has(currentStreamId)) {
-        streamConnections.get(currentStreamId)!.delete(ws);
-        if (streamConnections.get(currentStreamId)!.size === 0) {
-          streamConnections.delete(currentStreamId);
-        }
-      }
-    });
-  });
+  
 
   // ========== MEMBERSHIP & SUBSCRIPTION API ==========
   
