@@ -367,6 +367,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.updateStreamStatus(streamId, true, 0);
       console.log(`🟢 Stream ${streamId} started by user ${userId}`);
       
+      // Register initial heartbeat for stream monitoring
+      recordStreamHeartbeat(streamId, 0);
+      
       // Broadcast real-time update to all clients
       broadcastToAll({
         type: 'stream_started',
@@ -1459,10 +1462,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
             break;
 
           case 'heartbeat':
+          case 'stream_heartbeat':
             // Update heartbeat for current stream
             if (currentStreamId) {
               const viewerCount = streamConnections.get(currentStreamId)?.size || 0;
               recordStreamHeartbeat(currentStreamId, viewerCount);
+            }
+            // Handle global stream heartbeat (from App.tsx)
+            if (data.streamId) {
+              recordStreamHeartbeat(data.streamId, 1);
             }
             break;
 
