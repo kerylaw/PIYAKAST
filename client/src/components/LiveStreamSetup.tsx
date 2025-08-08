@@ -75,7 +75,7 @@ export function LiveStreamSetup({ onStreamCreated }: LiveStreamSetupProps) {
 
   const startStreamMutation = useMutation({
     mutationFn: async (streamId: string) => {
-      const response = await apiRequest('PUT', `/api/streams/${streamId}/start`);
+      const response = await apiRequest('POST', `/api/streams/${streamId}/start`);
       return response.json();
     },
     onSuccess: () => {
