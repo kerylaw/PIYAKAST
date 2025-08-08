@@ -123,6 +123,7 @@ function Router() {
             <Route path="/studio" component={Studio} />
             <Route path="/admin" component={AdminPage} />
             <Route path="/advertiser" component={Advertiser} />
+            <Route path="/ads" component={Advertiser} />
             <Route path="/channel/:channelId/membership" component={ChannelMembership} />
           </>
         )}
