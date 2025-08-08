@@ -47,36 +47,61 @@ function StreamHeartbeatManager() {
         clearInterval(heartbeatIntervalRef.current);
       }
 
-      // Send heartbeat immediately
-      const sendHeartbeat = () => {
+      // Send heartbeat immediately (HTTP fallback if WebSocket fails)
+      const sendHeartbeat = async () => {
         console.log("Sending global stream heartbeat for:", activeStream.id);
-        const wsUrl = `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}/ws`;
-        const ws = new WebSocket(wsUrl);
         
-        ws.onopen = () => {
-          console.log("✅ Heartbeat WebSocket connected, sending heartbeat");
-          ws.send(JSON.stringify({
-            type: 'stream_heartbeat',
-            streamId: activeStream.id
-          }));
+        try {
+          // Try WebSocket first
+          const wsUrl = `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}/ws`;
+          const ws = new WebSocket(wsUrl);
           
-          // Wait a bit before closing to ensure message is sent
-          setTimeout(() => {
-            ws.close();
-          }, 100);
-        };
-        
-        ws.onmessage = (event) => {
-          console.log("📨 Heartbeat WebSocket message received:", event.data);
-        };
-        
-        ws.onclose = () => {
-          console.log("🔒 Heartbeat WebSocket closed");
-        };
-        
-        ws.onerror = (error) => {
-          console.error("❌ Heartbeat WebSocket error:", error);
-        };
+          const wsPromise = new Promise((resolve, reject) => {
+            ws.onopen = () => {
+              console.log("✅ Heartbeat WebSocket connected, sending heartbeat");
+              ws.send(JSON.stringify({
+                type: 'stream_heartbeat',
+                streamId: activeStream.id
+              }));
+              
+              setTimeout(() => {
+                ws.close();
+                resolve(true);
+              }, 100);
+            };
+            
+            ws.onerror = (error) => {
+              console.error("❌ Heartbeat WebSocket error:", error);
+              reject(error);
+            };
+          });
+          
+          // Set a timeout for WebSocket connection
+          const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('WebSocket timeout')), 2000);
+          });
+          
+          await Promise.race([wsPromise, timeoutPromise]);
+          
+        } catch (error) {
+          console.warn("WebSocket heartbeat failed, using HTTP fallback:", error);
+          
+          // HTTP fallback
+          try {
+            const response = await fetch(`/api/streams/${activeStream.id}/heartbeat`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+            });
+            
+            if (response.ok) {
+              console.log("✅ HTTP heartbeat sent successfully");
+            } else {
+              console.error("❌ HTTP heartbeat failed:", response.status);
+            }
+          } catch (httpError) {
+            console.error("❌ HTTP heartbeat error:", httpError);
+          }
+        }
       };
 
       sendHeartbeat(); // Send immediately

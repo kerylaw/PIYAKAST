@@ -246,6 +246,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Stream heartbeat endpoint (HTTP fallback)
+  app.post("/api/streams/:id/heartbeat", async (req, res) => {
+    try {
+      const streamId = req.params.id;
+      recordStreamHeartbeat(streamId, 1);
+      console.log(`💓 HTTP heartbeat received for stream: ${streamId}`);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error processing heartbeat:", error);
+      res.status(500).json({ message: "Failed to process heartbeat" });
+    }
+  });
+
   // Stream routes
   app.get('/api/streams/live', async (req, res) => {
     try {
