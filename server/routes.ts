@@ -262,7 +262,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Stream routes
   app.get('/api/streams/live', async (req, res) => {
     try {
+      console.log("🔍 API call: /api/streams/live");
       const streams = await storage.getLiveStreams();
+      console.log(`📺 Found ${streams.length} live streams:`, streams.map(s => ({ id: s.id, title: s.title, isLive: s.isLive, isPublic: s.isPublic })));
       res.json(streams);
     } catch (error) {
       console.error("Error fetching live streams:", error);
