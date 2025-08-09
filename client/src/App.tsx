@@ -53,7 +53,24 @@ function StreamHeartbeatManager() {
         
         try {
           // Try WebSocket first
-          const wsUrl = `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}/ws`;
+          const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+          const wsHost = window.location.hostname;
+          // For development, use the current host and port 5000 for WebSocket
+          // For production, use the same host as the current page
+          const wsPort = import.meta.env.DEV ? ':5000' : window.location.port ? `:${window.location.port}` : '';
+          const wsPath = '/ws';
+          
+          // Construct WebSocket URL
+          let wsUrl;
+          if (import.meta.env.VITE_WS_URL) {
+            wsUrl = import.meta.env.VITE_WS_URL;
+          } else {
+            // Fallback to current host with appropriate protocol and port
+            wsUrl = `${wsProtocol}//${wsHost}${wsPort}${wsPath}`;
+          }
+          if (!wsUrl) {
+            throw new Error("VITE_WS_URL is not set");
+          }
           const ws = new WebSocket(wsUrl);
           
           const wsPromise = new Promise((resolve, reject) => {

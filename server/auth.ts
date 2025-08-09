@@ -9,6 +9,7 @@ import session from "express-session";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { storage } from "./storage";
+import { getPeerTubeClient } from "./peertube";
 import { User as SelectUser, registerSchema, loginSchema } from "@shared/schema";
 import connectPg from "connect-pg-simple";
 
@@ -19,6 +20,14 @@ declare global {
 }
 
 const scryptAsync = promisify(scrypt);
+
+function sanitizePeerTubeUsername(username: string): string {
+  const sanitized = username.replace(/[^a-zA-Z0-9_]/g, '').toLowerCase();
+  if (sanitized.length === 0) {
+    return `user${Date.now()}`;
+  }
+  return sanitized;
+}
 
 async function hashPassword(password: string) {
   const salt = randomBytes(16).toString("hex");
@@ -107,6 +116,22 @@ export function setupAuth(app: Express) {
                 isEmailVerified: true,
               };
               user = await storage.createUser(userData);
+
+              // Create user in PeerTube
+              try {
+                const peerTubeUsername = sanitizePeerTubeUsername(user.username);
+                const channelDisplayName = user.firstName ? `${user.firstName}'s Channel` : `${user.username}'s Channel`;
+                await getPeerTubeClient().createUser({
+                  username: peerTubeUsername,
+                  email: user.email,
+                  displayName: user.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : user.username,
+                  channelName: peerTubeUsername,
+                  channelDisplayName: channelDisplayName,
+                });
+              } catch (peertubeError) {
+                // Log the error but don't block the main registration process
+                console.error("Failed to create PeerTube user during registration:", peertubeError);
+              }
             }
             
             return done(null, user);
@@ -142,6 +167,22 @@ export function setupAuth(app: Express) {
                 isEmailVerified: profile._json.kakao_account?.is_email_verified || false,
               };
               user = await storage.createUser(userData);
+
+              // Create user in PeerTube
+              try {
+                const peerTubeUsername = sanitizePeerTubeUsername(user.username);
+                const channelDisplayName = user.firstName ? `${user.firstName}'s Channel` : `${user.username}'s Channel`;
+                await getPeerTubeClient().createUser({
+                  username: peerTubeUsername,
+                  email: user.email,
+                  displayName: user.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : user.username,
+                  channelName: peerTubeUsername,
+                  channelDisplayName: channelDisplayName,
+                });
+              } catch (peertubeError) {
+                // Log the error but don't block the main registration process
+                console.error("Failed to create PeerTube user during registration:", peertubeError);
+              }
             }
             
             return done(null, user);
@@ -178,6 +219,22 @@ export function setupAuth(app: Express) {
                 isEmailVerified: true,
               };
               user = await storage.createUser(userData);
+
+              // Create user in PeerTube
+              try {
+                const peerTubeUsername = sanitizePeerTubeUsername(user.username);
+                const channelDisplayName = user.firstName ? `${user.firstName}'s Channel` : `${user.username}'s Channel`;
+                await getPeerTubeClient().createUser({
+                  username: peerTubeUsername,
+                  email: user.email,
+                  displayName: user.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : user.username,
+                  channelName: peerTubeUsername,
+                  channelDisplayName: channelDisplayName,
+                });
+              } catch (peertubeError) {
+                // Log the error but don't block the main registration process
+                console.error("Failed to create PeerTube user during registration:", peertubeError);
+              }
             }
             
             return done(null, user);
@@ -215,7 +272,7 @@ export function setupAuth(app: Express) {
         return res.status(400).json({ message: "Username already exists" });
       }
 
-      // Create user
+      // Create user in PIYAKast
       const hashedPassword = await hashPassword(userData.password);
       const user = await storage.createUser({
         email: userData.email,
@@ -225,6 +282,23 @@ export function setupAuth(app: Express) {
         username: userData.username,
         provider: 'email',
       });
+
+      // Create user in PeerTube
+      try {
+        const peerTubeUsername = sanitizePeerTubeUsername(user.username);
+        const channelDisplayName = user.firstName ? `${user.firstName}'s Channel` : `${user.username}'s Channel`;
+        await getPeerTubeClient().createUser({
+          username: peerTubeUsername,
+          password: userData.password, // Send plain password to PeerTube
+          email: user.email,
+          displayName: user.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : user.username,
+          channelName: peerTubeUsername,
+          channelDisplayName: channelDisplayName,
+        });
+      } catch (peertubeError) {
+        // Log the error but don't block the main registration process
+        console.error("Failed to create PeerTube user during registration:", peertubeError);
+      }
 
       req.login(user, (err) => {
         if (err) return next(err);

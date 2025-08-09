@@ -120,6 +120,46 @@ export class PeerTubeClient {
   }
 
   /**
+   * Create a new user in PeerTube
+   */
+  async createUser(userData: {
+    username: string;
+    password?: string; // Optional for OAuth, required for local
+    email: string;
+    displayName: string;
+    channelName?: string;
+    channelDisplayName?: string;
+  }): Promise<any> {
+    try {
+      // Use admin credentials for user creation
+      await this.authenticate();
+
+      const response = await axios.post(
+        `${this.baseUrl}/api/v1/users`,
+        {
+          username: userData.username,
+          password: userData.password,
+          email: userData.email,
+          displayName: userData.displayName,
+          role: 1, // Explicitly set role to User
+          channel: userData.channelName ? {
+            name: userData.channelName,
+            displayName: userData.channelDisplayName || userData.channelName,
+          } : undefined,
+        },
+        { headers: this.getHeaders() }
+      );
+
+      console.log(`✅ PeerTube user created successfully: ${response.data.user.username}`);
+      return response.data;
+    } catch (error: any) {
+      console.error('Failed to create PeerTube user:', error.response?.data || error.message);
+      // Don't re-throw, just log the error to avoid blocking PIYAKast registration
+      return null;
+    }
+  }
+
+  /**
    * Get user's channels
    */
   async getChannels(): Promise<PeerTubeChannel[]> {
@@ -232,16 +272,18 @@ export class PeerTubeClient {
         { headers: this.getHeaders() }
       );
 
+      console.log('PeerTube live stream creation response:', response.data); // Log the full response
+
       const live = response.data.video;
-      console.log('✅ Live stream created successfully:', live.name);
+      console.log('✅ Live stream created successfully:', metadata.name); // Use metadata.name
 
       return {
         id: live.id,
         uuid: live.uuid,
-        name: live.name,
-        description: live.description,
-        rtmpUrl: live.rtmpUrl || `rtmp://localhost:1935/live`,
-        streamKey: live.streamKey,
+        name: metadata.name, // Use metadata.name
+        description: metadata.description || '', // Use metadata.description
+        rtmpUrl: `rtmp://localhost:1935/live`, // Fixed RTMP URL
+        streamKey: live.uuid, // Use video.uuid as stream key
         embedUrl: `${this.baseUrl}/videos/embed/${live.uuid}`,
         permanentLive: liveData.permanentLive,
         saveReplay: liveData.saveReplay

@@ -85,6 +85,7 @@ export interface IStorage {
   getUserByEmail(email: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   getUserByProviderId(provider: string, providerId: string): Promise<User | undefined>;
+  deleteUser(id: string): Promise<void>;
 
   // Video operations
   createVideo(video: InsertVideo): Promise<Video>;
@@ -110,6 +111,7 @@ export interface IStorage {
 
   // Chat operations
   createChatMessage(message: InsertChatMessage): Promise<ChatMessage>;
+  getChatMessage(id: string): Promise<ChatMessage | undefined>; // Added this line
   getChatMessagesByStream(streamId: string, limit?: number): Promise<ChatMessage[]>;
 
   // Video likes operations
@@ -317,6 +319,10 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
+  async deleteUser(id: string): Promise<void> {
+    await db.delete(users).where(eq(users.id, id));
+  }
+
   // Video operations
   async createVideo(video: InsertVideo): Promise<Video> {
     const [createdVideo] = await db.insert(videos).values(video).returning();
@@ -462,7 +468,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUserStreams(userId: string): Promise<any[]> {
-    return await db
+    console.log(`[Storage] Fetching streams for userId: ${userId}`); // Added log
+    const result = await db
       .select({
         id: streams.id,
         userId: streams.userId,
@@ -490,6 +497,8 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(users, eq(streams.userId, users.id))
       .where(eq(streams.userId, userId))
       .orderBy(desc(streams.createdAt));
+    console.log(`[Storage] Found ${result.length} streams for userId: ${userId}`); // Added log
+    return result;
   }
 
   async getStreamsByUser(userId: string): Promise<Stream[]> {
@@ -539,6 +548,26 @@ export class DatabaseStorage implements IStorage {
   async createChatMessage(message: InsertChatMessage): Promise<ChatMessage> {
     const [createdMessage] = await db.insert(chatMessages).values(message).returning();
     return createdMessage;
+  }
+
+  async getChatMessage(id: string): Promise<ChatMessage | undefined> {
+    const [chatMessage] = await db
+      .select({
+        id: chatMessages.id,
+        streamId: chatMessages.streamId,
+        userId: chatMessages.userId,
+        message: chatMessages.message,
+        createdAt: chatMessages.createdAt,
+        user: {
+          id: users.id,
+          username: users.username,
+          profileImageUrl: users.profileImageUrl,
+        },
+      })
+      .from(chatMessages)
+      .leftJoin(users, eq(chatMessages.userId, users.id))
+      .where(eq(chatMessages.id, id));
+    return chatMessage;
   }
 
   async getChatMessagesByStream(streamId: string, limit = 50): Promise<any[]> {

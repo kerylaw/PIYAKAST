@@ -3,7 +3,7 @@ import express from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
-// import { recordStreamHeartbeat, removeStream } from "./streamMonitor";
+import { recordStreamHeartbeat, removeStream } from "./streamMonitor";
 import { setupAuth, requireAuth } from "./auth";
 
 // Admin middleware
@@ -248,6 +248,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.delete("/api/users/:username", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const { username } = req.params;
+      const user = await storage.getUserByUsername(username);
+
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      await storage.deleteUser(user.id);
+
+      res.status(200).json({ message: `User ${username} deleted successfully` });
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      res.status(500).json({ message: "Failed to delete user" });
+    }
+  });
+
   // Stream heartbeat endpoint (HTTP fallback)
   app.post("/api/streams/:id/heartbeat", async (req, res) => {
     try {
@@ -278,7 +296,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/streams/user/:userId', async (req, res) => {
     try {
       const { userId } = req.params;
+      console.log(`[API] Fetching streams for user: ${userId}`); // Added log
       const streams = await storage.getUserStreams(userId);
+      console.log(`[API] Found ${streams.length} streams for user ${userId}`); // Added log
       res.json(streams);
     } catch (error) {
       console.error("Error fetching user streams:", error);
@@ -387,12 +407,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Register initial heartbeat for stream monitoring
       recordStreamHeartbeat(streamId, 0);
       
-      // Broadcast real-time update to all clients
-      broadcastToAll({
+      // Broadcast real-time update to stream clients
+      const messageStr = JSON.stringify({
         type: 'stream_started',
         streamId,
         timestamp: new Date().toISOString()
       });
+      if (chatClients.has(streamId)) {
+        chatClients.get(streamId)!.forEach(client => {
+          if (client.readyState === WebSocket.OPEN) {
+            client.send(messageStr);
+          }
+        });
+      }
       
       res.json({ message: "Stream started" });
     } catch (error) {
@@ -419,12 +446,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.updateStreamStatus(streamId, false);
       console.log(`🔴 Stream ${streamId} stopped by user ${userId}`);
       
-      // Broadcast real-time update to all clients
-      broadcastToAll({
+      // Broadcast real-time update to stream clients
+      const messageStr = JSON.stringify({
         type: 'stream_stopped',
         streamId,
         timestamp: new Date().toISOString()
       });
+      if (chatClients.has(streamId)) {
+        chatClients.get(streamId)!.forEach(client => {
+          if (client.readyState === WebSocket.OPEN) {
+            client.send(messageStr);
+          }
+        });
+      }
       
       res.json({ message: "Stream stopped" });
     } catch (error) {
@@ -1083,9 +1117,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         streamId
       });
       
-      if (streamConnections.has(streamId)) {
-        streamConnections.get(streamId)!.forEach(client => {
-          if (client.readyState === 1) { // WebSocket.OPEN
+      if (chatClients.has(streamId)) {
+        chatClients.get(streamId)!.forEach(client => {
+          if (client.readyState === WebSocket.OPEN) {
             client.send(messageStr);
           }
         });
@@ -1420,7 +1454,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/membership-tiers/:tierId/benefits', requireAuth, async (req, res) => {
+  app.post('/api/membership-tiers/:tierId/benefits', requireAuth, async (req, any, res) => {
     try {
       const { tierId } = req.params;
       const userId = req.user?.id;
@@ -1911,7 +1945,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Analytics and Reporting
-  app.get('/api/ad-campaigns/:id/performance', requireAuth, async (req: any, res) => {
+  app.get('/api/ad-campaigns/:id/performance', requireAuth, async (req, res) => {
     try {
       const { id } = req.params;
       const { startDate, endDate } = req.query;
@@ -1979,256 +2013,105 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // User Ad Preferences
-  app.get('/api/users/ad-preferences', requireAuth, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const preferences = await storage.getUserAdPreferences(userId);
-      
-      if (!preferences) {
-        // Create default preferences
-        const defaultPreferences = await storage.createUserAdPreferences({
-          userId,
-          allowPersonalizedAds: true,
-          blockedAdvertisers: []
-        });
-        return res.json(defaultPreferences);
+  // ========== WebSocket Server for Real-time Chat ==========
+  const wss = new WebSocketServer({ server: httpServer });
+
+  // Function to broadcast a message to all connected clients
+  function broadcastToAll(message: any) {
+    const messageStr = JSON.stringify(message);
+    wss.clients.forEach(client => {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(messageStr);
       }
+    });
+  }
 
-      res.json(preferences);
-    } catch (error) {
-      console.error('Error fetching ad preferences:', error);
-      res.status(500).json({ message: 'Failed to fetch ad preferences' });
-    }
-  });
+  // Map to store WebSocket connections for each stream
+  const chatClients = new Map<string, Set<WebSocket>>();
 
-  app.patch('/api/users/ad-preferences', requireAuth, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const updatedPreferences = await storage.updateUserAdPreferences(userId, req.body);
-      res.json(updatedPreferences);
-    } catch (error) {
-      console.error('Error updating ad preferences:', error);
-      res.status(500).json({ message: 'Failed to update ad preferences' });
-    }
-  });
+  wss.on("connection", (ws, req) => {
+    const url = new URL(req.url!, `http://${req.headers.host}`);
+    const streamId = url.searchParams.get("streamId");
 
-  // Admin Ad System Management
-  app.get('/api/admin/ads/revenue', requireAuth, requireAdmin, async (req, res) => {
-    try {
-      const { startDate, endDate } = req.query;
-      
-      const platformRevenue = await storage.getPlatformAdRevenue(
-        startDate ? new Date(startDate as string) : undefined,
-        endDate ? new Date(endDate as string) : undefined
-      );
-
-      res.json({
-        platformRevenue: platformRevenue?.totalRevenue || 0,
-        totalSpend: platformRevenue?.totalSpend || 0,
-        totalImpressions: platformRevenue?.totalImpressions || 0,
-        platformShare: 30, // 30% platform share
-        creatorShare: 70,  // 70% creator share
-        currency: 'KRW'
-      });
-    } catch (error) {
-      console.error('Error fetching platform ad revenue:', error);
-      res.status(500).json({ message: 'Failed to fetch platform revenue' });
-    }
-  });
-
-  app.get('/api/admin/advertisers', requireAuth, requireAdmin, async (req, res) => {
-    try {
-      const advertisers = await storage.getAdvertisers();
-      res.json(advertisers);
-    } catch (error) {
-      console.error('Error fetching advertisers:', error);
-      res.status(500).json({ message: 'Failed to fetch advertisers' });
-    }
-  });
-
-  app.patch('/api/admin/advertisers/:id/status', requireAuth, requireAdmin, async (req, res) => {
-    try {
-      const { id } = req.params;
-      const { status } = req.body;
-      
-      const updatedAdvertiser = await storage.updateAdvertiser(id, { isActive: status === 'active' });
-      res.json(updatedAdvertiser);
-    } catch (error) {
-      console.error('Error updating advertiser status:', error);
-      res.status(500).json({ message: 'Failed to update advertiser status' });
-    }
-  });
-
-  // Advertiser Dashboard API
-  app.get('/api/advertiser/profile', requireAuth, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      
-      // Get advertiser record from database
-      const advertiser = await storage.getAdvertiserByUserId(userId);
-      
-      if (!advertiser) {
-        // If no advertiser account exists, return user info with prompt to create
-        const user = await storage.getUser(userId);
-        return res.json({
-          id: user?.id,
-          companyName: null,
-          email: user?.email,
-          status: 'inactive',
-          accountType: 'user',
-          needsAdvertiserAccount: true
-        });
+    if (streamId) {
+      if (!chatClients.has(streamId)) {
+        chatClients.set(streamId, new Set());
       }
-      
-      res.json(advertiser);
-    } catch (error) {
-      console.error('Error fetching advertiser profile:', error);
-      res.status(500).json({ message: 'Failed to fetch advertiser profile' });
-    }
-  });
+      chatClients.get(streamId)!.add(ws);
 
-  app.get('/api/advertiser/campaigns', requireAuth, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      
-      // Get advertiser record
-      const advertiser = await storage.getAdvertiserByUserId(userId);
-      if (!advertiser) {
-        return res.status(403).json({ message: 'Advertiser account required' });
-      }
-      
-      // Fetch real campaigns from database
-      const campaigns = await storage.getAdCampaignsByAdvertiser(advertiser.id);
-      
-      // Enhance campaigns with performance metrics
-      const enhancedCampaigns = await Promise.all(
-        campaigns.map(async (campaign: any) => {
-          const metrics = await storage.getAdCampaignMetrics(campaign.id);
-          return {
-            ...campaign,
-            spendPercentage: campaign.budget > 0 ? Math.round((metrics.totalSpent / campaign.budget) * 100) : 0,
-            impressions: metrics.totalImpressions || 0,
-            clicks: metrics.totalClicks || 0,
-            ctr: metrics.totalImpressions > 0 ? ((metrics.totalClicks / metrics.totalImpressions) * 100).toFixed(2) : 0
-          };
-        })
-      );
-      
-      res.json(enhancedCampaigns);
-    } catch (error) {
-      console.error('Error fetching campaigns:', error);
-      res.status(500).json({ message: 'Failed to fetch campaigns' });
-    }
-  });
+      console.log(`[ws] Client connected to stream: ${streamId}`);
 
-  app.post('/api/advertiser/campaigns', requireAuth, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const { name, budget, targetAudience, description, startDate, endDate } = req.body;
-      
-      if (!name || !budget) {
-        return res.status(400).json({ message: 'Campaign name and budget are required' });
-      }
+      // Send current viewer count
+      const viewerCount = chatClients.get(streamId)!.size;
 
-      // Get advertiser record
-      const advertiser = await storage.getAdvertiserByUserId(userId);
-      if (!advertiser) {
-        return res.status(403).json({ message: 'Advertiser account required' });
-      }
-      
-      // Create campaign in database
-      const campaignData = {
-        advertiserId: advertiser.id,
-        name,
-        description: description || '',
-        objective: 'brand_awareness', // Default objective for Korean streaming platform
-        campaignType: 'display', // Default campaign type
-        dailyBudget: parseInt(budget),
-        maxBid: Math.max(parseInt(budget) * 0.1, 1000), // 10% of daily budget or minimum 1000 KRW
-        targetAudience: { audience: targetAudience || 'general' }, // JSON object
-        status: 'draft' as const,
-        startDate: startDate ? new Date(startDate) : new Date(),
-        endDate: endDate ? new Date(endDate) : null
-      };
-      
-      const newCampaign = await storage.createAdCampaign(campaignData);
-      
-      res.status(201).json({
-        ...newCampaign,
-        spendPercentage: 0,
-        impressions: 0,
-        clicks: 0,
-        ctr: 0
-      });
-    } catch (error) {
-      console.error('Error creating campaign:', error);
-      res.status(500).json({ message: 'Failed to create campaign' });
-    }
-  });
+    ws.on("message", async (message) => {
+        try {
+            const parsedMessage = JSON.parse(message.toString());
+            
+            if (parsedMessage.type === 'chat' && parsedMessage.userId && parsedMessage.message) {
+                const newMessage = await storage.createChatMessage({
+                    streamId: streamId,
+                    userId: parsedMessage.userId,
+                    message: parsedMessage.message,
+                });
 
-  app.get('/api/advertiser/stats', requireAuth, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      
-      // Get advertiser record
-      const advertiser = await storage.getAdvertiserByUserId(userId);
-      if (!advertiser) {
-        return res.status(403).json({ message: 'Advertiser account required' });
-      }
-      
-      // Calculate real statistics from database
-      const campaigns = await storage.getAdCampaignsByAdvertiser(advertiser.id);
-      const advertiserStats = await storage.getAdvertiserStats(advertiser.id);
-      
-      // Calculate totals
-      let totalSpend = 0;
-      let totalImpressions = 0;
-      let totalClicks = 0;
-      let activeCampaigns = 0;
-      const categoryPerformance: { [key: string]: number } = {};
-      
-      for (const campaign of campaigns) {
-        if (campaign.status === 'active') {
-          activeCampaigns++;
+                const chatMessage = await storage.getChatMessage(newMessage.id);
+
+                const messageToSend = JSON.stringify({ type: 'chat', ...chatMessage });
+                chatClients.get(streamId)?.forEach(client => {
+                    if (client.readyState === WebSocket.OPEN) {
+                        client.send(messageToSend);
+                    }
+                });
+            } else if (parsedMessage.type === 'superchat' && parsedMessage.data && parsedMessage.streamId) {
+              // SuperChat 메시지 브로드캐스팅 (기존 로직 유지)
+              const messageStr = JSON.stringify({
+                type: 'superchat',
+                data: parsedMessage.data,
+                streamId: parsedMessage.streamId
+              });
+              chatClients.get(parsedMessage.streamId)?.forEach(client => {
+                if (client.readyState === WebSocket.OPEN) {
+                  client.send(messageStr);
+                }
+              });
+            } else if (parsedMessage.type === 'heartbeat') {
+              // Record heartbeat for stream monitoring
+              recordStreamHeartbeat(streamId, 0);
+              console.log(`💓 WebSocket heartbeat received for stream: ${streamId}`);
+            }
+        } catch (error) {
+            console.error('Failed to process message:', error);
         }
+    });
+
+      ws.on("close", () => {
+        if (chatClients.has(streamId)) {
+          chatClients.get(streamId)!.delete(ws);
+          if (chatClients.get(streamId)!.size === 0) {
+            chatClients.delete(streamId);
+          }
+        }
+        console.log(`[ws] Client disconnected from stream: ${streamId}`);
         
-        const metrics = await storage.getAdCampaignMetrics(campaign.id);
-        totalSpend += metrics.totalSpent || 0;
-        totalImpressions += metrics.totalImpressions || 0;
-        totalClicks += metrics.totalClicks || 0;
-        
-        // Track category performance
-        const category = (typeof campaign.targetAudience === 'object' && campaign.targetAudience) 
-          ? (campaign.targetAudience as any).audience || 'general' 
-          : 'general';
-        categoryPerformance[category] = (categoryPerformance[category] || 0) + (metrics.totalClicks || 0);
-      }
-      
-      // Find top performing category
-      const topPerformingCategory = Object.keys(categoryPerformance).length > 0
-        ? Object.keys(categoryPerformance).reduce((a, b) => 
-            categoryPerformance[a] > categoryPerformance[b] ? a : b)
-        : 'None';
-      
-      // Calculate average CTR
-      const averageCTR = totalImpressions > 0 ? ((totalClicks / totalImpressions) * 100) : 0;
-      
-      const stats = {
-        totalSpend,
-        totalImpressions,
-        totalClicks,
-        averageCTR: parseFloat(averageCTR.toFixed(2)),
-        activeCampaigns,
-        totalCampaigns: campaigns.length,
-        topPerformingCategory,
-        monthlySpend: advertiserStats.monthlySpend || []
-      };
-      
-      res.json(stats);
-    } catch (error) {
-      console.error('Error fetching advertiser stats:', error);
-      res.status(500).json({ message: 'Failed to fetch advertiser statistics' });
+        // Update and broadcast viewer count
+        const viewerCount = chatClients.has(streamId) ? chatClients.get(streamId)!.size : 0;
+        const message = JSON.stringify({ type: "viewer_count", count: viewerCount });
+        if (chatClients.has(streamId)) {
+          chatClients.get(streamId)!.forEach(client => {
+            if (client.readyState === WebSocket.OPEN) {
+              client.send(message);
+            }
+          });
+        }
+      });
+
+      ws.on("error", (error) => {
+        console.error("[ws] WebSocket error:", error);
+      });
+    } else {
+      console.log("[ws] Client connected without streamId");
+      ws.close();
     }
   });
 

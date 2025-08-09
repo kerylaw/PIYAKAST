@@ -96,12 +96,22 @@ export default function AuthPage() {
       window.location.href = "/";
     },
     onError: (error: any) => {
-      setError(error.message || "회원가입에 실패했습니다.");
-      toast({
-        title: "회원가입 실패",
-        description: error.message || "다시 시도해주세요.",
-        variant: "destructive",
-      });
+      const errorMessage = error.message || "회원가입에 실패했습니다.";
+      setError(errorMessage);
+
+      if (errorMessage.includes("Email already exists")) {
+        toast({
+          title: "회원가입 실패",
+          description: "이미 사용중인 이메일입니다.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "회원가입 실패",
+          description: errorMessage,
+          variant: "destructive",
+        });
+      }
     },
   });
 
@@ -322,7 +332,7 @@ export default function AuthPage() {
                         <Input
                           id="registerPassword"
                           type={showPassword ? "text" : "password"}
-                          placeholder="6자 이상의 비밀번호"
+                          placeholder="8자 이상, 대/소문자, 숫자, 특수문자"
                           className="pl-10 pr-10"
                           data-testid="input-password-register"
                           {...registerForm.register("password")}

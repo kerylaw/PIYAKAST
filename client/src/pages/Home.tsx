@@ -24,8 +24,26 @@ export default function Home() {
 
   // WebSocket connection for real-time updates
   useEffect(() => {
-    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const wsUrl = `${protocol}//${window.location.host}/ws`;
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsHost = window.location.hostname;
+    // For development, use the current host and port 5000 for WebSocket
+    // For production, use the same host as the current page
+    const wsPort = import.meta.env.DEV ? ':5000' : window.location.port ? `:${window.location.port}` : '';
+    const wsPath = '/ws';
+    
+    // Construct WebSocket URL
+    let wsUrl;
+    if (import.meta.env.VITE_WS_URL) {
+      wsUrl = import.meta.env.VITE_WS_URL;
+    } else {
+      // Fallback to current host with appropriate protocol and port
+      wsUrl = `${wsProtocol}//${wsHost}${wsPort}${wsPath}`;
+    }
+    
+    if (!wsUrl) {
+      console.error("WebSocket URL is not properly constructed");
+      return;
+    }
     
     const ws = new WebSocket(wsUrl);
     wsRef.current = ws;
